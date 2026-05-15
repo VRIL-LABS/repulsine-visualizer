@@ -1,0 +1,7 @@
+name: "Repulsine Visualizer CodeQL Config"
+
+paths-ignore:
+  # Historical prototype HTML files extracted from ZIP archives.
+  # These are reference-only archives, not served in production.
+  # The production app uses bundled npm packages (three, @react-three/fiber).
+  - "source/**"
