@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Repulsine · Haunebu Hull · Pass 2M</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;800&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0} html,body{height:100%;overflow:hidden}
+body{font-family:Inter,system-ui,sans-serif;display:grid;place-items:center;min-height:100dvh;
+  background:radial-gradient(circle at 12% 0%,rgba(255,255,255,.84),transparent 30%),
+  radial-gradient(circle at 88% 100%,rgba(255,255,255,.62),transparent 26%),
+  linear-gradient(162deg,#f4f7fb 0%,#eaf0f5 46%,#dce5ee 100%)}
+.stage{width:min(96vw,1260px);padding:32px;display:grid;place-items:center}
+.panel{position:relative;width:min(980px,94vw);min-height:860px;border-radius:44px;
+  background:linear-gradient(145deg,#edf3f8,#dee7ee);
+  box-shadow:38px 38px 76px rgba(160,176,194,.44),-32px -32px 68px rgba(255,255,255,.98),
+  inset 1px 1px 0 rgba(255,255,255,.82),inset -1px -1px 0 rgba(168,184,200,.2);
+  display:grid;place-items:center;padding:92px 32px 126px;overflow:visible}
+.panel::before{content:"";position:absolute;inset:28px;border-radius:36px;pointer-events:none;
+  background:linear-gradient(145deg,rgba(255,255,255,.3),rgba(255,255,255,.04));
+  box-shadow:inset 22px 22px 36px rgba(170,186,202,.22),inset -20px -20px 32px rgba(255,255,255,.48)}
+.panel-tag,.panel-note{position:absolute;z-index:10;font-size:10.5px;letter-spacing:.22em;text-transform:uppercase;color:rgba(88,104,120,.56)}
+.panel-tag{top:34px;left:40px}.panel-note{right:42px;bottom:38px;color:rgba(88,104,120,.42)}
+
+/* ─── scene: perspective origin, no opacity/filter ─── */
+.scene{position:relative;width:min(100%,840px);height:700px;perspective:600px;
+  overflow:visible;z-index:2;display:grid;place-items:center}
+
+/* ─── 2D underlay ─── */
+.underlay{position:absolute;inset:0;pointer-events:none;overflow:visible;z-index:1}
+.aura,.well,.field-shell,.force-ring,.shadow-umbra{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);pointer-events:none}
+.aura{width:820px;height:820px;border-radius:50%;
+  background:radial-gradient(circle at 50% 52%,rgba(255,255,255,.74) 0 8%,rgba(255,255,255,.18) 14%,transparent 36%),
+  radial-gradient(circle at 50% 52%,rgba(57,223,200,.08) 0 16%,transparent 34%);
+  filter:blur(22px);opacity:.86}
+.well{width:470px;height:470px;border-radius:50%;
+  background:linear-gradient(145deg,#d8e4ec,#ecf3f8);
+  box-shadow:inset 36px 36px 48px rgba(166,180,196,.6),inset -30px -30px 46px rgba(255,255,255,.98),0 0 0 1px rgba(255,255,255,.46);
+  transition:box-shadow .6s ease}
+.scene[data-state="hover"] .well{box-shadow:inset 28px 28px 38px rgba(155,170,188,.5),inset -22px -22px 38px rgba(255,255,255,.98),0 0 0 1px rgba(255,255,255,.52),0 0 48px rgba(57,223,200,.08)}
+.scene[data-state="charge"] .well{box-shadow:inset 22px 22px 28px rgba(148,164,182,.44),inset -18px -18px 32px rgba(255,255,255,.96),0 0 0 1px rgba(255,255,255,.58),0 0 80px rgba(57,223,200,.18)}
+.field-shell{width:200px;height:200px;border-radius:50%;
+  background:radial-gradient(circle,rgba(255,255,255,.48) 0 26%,rgba(255,255,255,.14) 38%,rgba(255,255,255,.02) 56%,transparent 72%),
+  radial-gradient(circle,rgba(57,223,200,.36) 0 20%,rgba(57,223,200,.12) 38%,transparent 68%);
+  box-shadow:0 0 32px rgba(255,255,255,.36),0 0 52px rgba(57,223,200,.2),0 0 88px rgba(57,223,200,.08);
+  opacity:0;transform:translate(-50%,-50%) scale(.01);will-change:transform,opacity}
+.force-ring{width:360px;height:360px;border-radius:50%;opacity:0;
+  background:radial-gradient(circle,transparent 54%,rgba(255,255,255,.9) 60%,rgba(255,255,255,.16) 65%,transparent 71%);
+  will-change:transform,opacity}
+.shadow-umbra{width:300px;height:116px;border-radius:50%;
+  background:radial-gradient(circle,rgba(108,122,136,.46) 0,rgba(108,122,136,.18) 40%,transparent 74%);
+  filter:blur(12px);opacity:.3;transform:translate(-50%,-50%) translateY(168px) scale(1);will-change:transform,opacity,filter}
+
+/* ─── 3D tilt stack ─── */
+.tilt-stage,.tilt-body{transform-style:preserve-3d}
+.tilt-stage{position:relative;width:590px;height:440px;z-index:5;display:grid;place-items:center}
+.tilt-body{position:relative;width:590px;height:440px;transform:rotateX(0deg) rotateY(0deg);transition:transform 72ms linear;will-change:transform;display:grid;place-items:center}
+
+/* ─── Haunebu saucer button ─── */
+/* 480×300px: disc at vertical center, dome on top, belly below */
+.saucer{position:absolute;left:50%;top:50%;width:480px;height:300px;
+  margin:-150px 0 0 -240px;background:none;border:none;padding:0;cursor:pointer;
+  transform-style:preserve-3d;overflow:visible;will-change:transform}
+.saucer:focus-visible{outline:2px solid rgba(57,223,200,.6);outline-offset:12px;border-radius:50%}
+
+/* All saucer children: no filter, no opacity on layers that would flatten 3d */
+.s-disc,.s-dome,.s-dome-rim,.s-belly,.s-equator,.s-ring-a,.s-ring-b,.s-seams,.s-apertures,.s-shine,.engage-svg{
+  position:absolute;pointer-events:none}
+
+/* ── MAIN DISC BODY: the wide flat primary saucer plate ── */
+.s-disc{left:6px;right:6px;top:96px;height:108px;border-radius:50%;
+  transform:translateZ(0px);
+  background:
+    radial-gradient(circle at 28% 34%,rgba(255,255,255,.96) 0 7%,rgba(255,255,255,.22) 14%,transparent 28%),
+    radial-gradient(circle at 52% 48%,rgba(255,255,255,.12) 0 26%,transparent 56%),
+    linear-gradient(180deg,#eff4f8 0%,#e2ecf3 38%,#d4e0eb 68%,#c8d5e2 100%);
+  box-shadow:
+    -28px -22px 36px rgba(255,255,255,.97),
+    28px 32px 44px rgba(154,168,186,.62),
+    inset -16px -16px 22px rgba(255,255,255,.62),
+    inset 14px 18px 22px rgba(172,186,204,.28);
+  transition:box-shadow .5s ease}
+.scene[data-state="hover"] .s-disc{box-shadow:-32px -26px 40px rgba(255,255,255,.99),32px 36px 48px rgba(152,166,184,.64),inset -18px -18px 26px rgba(255,255,255,.66),inset 16px 20px 26px rgba(168,182,200,.3)}
+.scene[data-state="charge"] .s-disc{box-shadow:-36px -30px 44px rgba(255,255,255,1),36px 40px 54px rgba(148,162,180,.68),inset -20px -20px 30px rgba(255,255,255,.7),inset 18px 22px 30px rgba(164,178,196,.34)}
+
+/* ── HAUNEBU COMMAND DOME: raised on top of disc ── */
+/* Dome top:14px, bottom aligns with disc top (96px), height:82px → sits top:14 to 96 */
+.s-dome{left:164px;top:14px;width:152px;height:82px;
+  border-radius:50% 50% 44% 44% / 76% 76% 52% 52%;
+  transform:translateZ(20px);
+  background:
+    radial-gradient(circle at 36% 26%,rgba(255,255,255,.99) 0 9%,rgba(255,255,255,.34) 20%,rgba(255,255,255,.1) 36%,transparent 52%),
+    radial-gradient(circle at 64% 72%,rgba(57,223,200,.08) 0 20%,transparent 48%),
+    linear-gradient(165deg,#f4f8fc 0%,#e6f0f6 42%,#d8e8f2 76%,#ccdfeb 100%);
+  box-shadow:
+    -18px -22px 28px rgba(255,255,255,.97),
+    18px 24px 32px rgba(150,164,182,.54),
+    inset -10px -10px 16px rgba(255,255,255,.58),
+    inset 8px 10px 16px rgba(166,180,198,.24)}
+
+/* ── DOME GLASS RING: crystalline outer ring on the Kristallkabine ── */
+.s-dome-rim{left:156px;top:10px;width:168px;height:98px;
+  border-radius:50% 50% 44% 44% / 76% 76% 52% 52%;
+  transform:translateZ(18px);
+  background:transparent;
+  -webkit-mask:radial-gradient(ellipse 50% 46% at 50% 50%,transparent 56%,black 62%,black 72%,transparent 78%);
+  mask:radial-gradient(ellipse 50% 46% at 50% 50%,transparent 56%,black 62%,black 72%,transparent 78%);
+  border:1px solid rgba(200,218,232,.56);
+  box-shadow:0 -4px 12px rgba(255,255,255,.52),0 4px 8px rgba(140,158,176,.28);
+  opacity:.7}
+
+/* ── LOWER PROPULSION BELLY: the Thule Triebwerk housing ── */
+/* Sits below disc: disc bottom = 204px, belly top ~194px (slight overlap), height:70px */
+.s-belly{left:185px;top:194px;width:110px;height:70px;
+  border-radius:46% 46% 50% 50% / 48% 48% 76% 76%;
+  transform:translateZ(4px);
+  background:
+    radial-gradient(circle at 38% 28%,rgba(255,255,255,.52) 0 12%,transparent 32%),
+    linear-gradient(180deg,#d6e1ec 0%,#c8d4e0 42%,#bac8d6 100%);
+  box-shadow:
+    inset -6px 8px 14px rgba(255,255,255,.44),
+    inset 6px -8px 14px rgba(114,128,146,.28),
+    0 10px 22px rgba(114,128,146,.36),
+    0 0 0 1px rgba(198,210,222,.4)}
+
+/* ── EQUATORIAL FLANGE: the wide outer ring at the disc waist ── */
+.s-equator{left:0;right:0;top:130px;height:40px;border-radius:50%;
+  transform:translateZ(14px);
+  background:linear-gradient(180deg,#e0eaf2 0%,#d2dfe9 50%,#c4d0dc 100%);
+  box-shadow:
+    0 -8px 16px rgba(255,255,255,.74),
+    0 12px 20px rgba(134,149,167,.46),
+    inset 0 4px 8px rgba(255,255,255,.48),
+    inset 0 -4px 8px rgba(126,142,160,.22)}
+
+/* ── ORBITAL RINGS: biomemetic telemetry / drive bands ── */
+/* Ring A: outer orbital on disc equator */
+.s-ring-a{left:82px;right:82px;top:116px;height:68px;border-radius:50%;
+  transform:translateZ(16px) rotate(0deg);
+  background:conic-gradient(from 90deg,
+    rgba(255,255,255,.26),rgba(255,255,255,.04),
+    rgba(57,223,200,.2),rgba(255,194,92,.26),
+    rgba(57,223,200,.16),rgba(255,255,255,.26));
+  -webkit-mask:radial-gradient(ellipse 50% 46% at 50% 50%,transparent 54%,black 59%,black 67%,transparent 72%);
+  mask:radial-gradient(ellipse 50% 46% at 50% 50%,transparent 54%,black 59%,black 67%,transparent 72%);
+  opacity:.2;transition:opacity .4s ease;will-change:transform,opacity}
+
+/* Ring B: inner counter-orbital */
+.s-ring-b{left:136px;right:136px;top:128px;height:44px;border-radius:50%;
+  transform:translateZ(18px) rotate(0deg);
+  background:conic-gradient(from 28deg,
+    rgba(255,255,255,.2),rgba(255,255,255,0),
+    rgba(255,194,92,.32),rgba(255,255,255,0),
+    rgba(57,223,200,.34),rgba(255,255,255,.2));
+  -webkit-mask:radial-gradient(ellipse 50% 46% at 50% 50%,transparent 44%,black 52%,black 60%,transparent 66%);
+  mask:radial-gradient(ellipse 50% 46% at 50% 50%,transparent 44%,black 52%,black 60%,transparent 66%);
+  opacity:.1;transition:opacity .4s ease;will-change:transform,opacity}
+
+/* ── SEAM LINES: machined panel detail ── */
+.s-seams{left:82px;right:82px;top:100px;height:100px;border-radius:50%;
+  transform:translateZ(15px);
+  background:conic-gradient(from 16deg,
+    transparent 0 18deg,rgba(140,154,168,.3) 18deg 20deg,
+    transparent 20deg 78deg,rgba(140,154,168,.28) 78deg 80deg,
+    transparent 80deg 148deg,rgba(140,154,168,.26) 148deg 150deg,
+    transparent 150deg 218deg,rgba(140,154,168,.22) 218deg 220deg,
+    transparent 220deg 288deg,rgba(140,154,168,.2) 288deg 290deg,
+    transparent 290deg 360deg);
+  -webkit-mask:radial-gradient(ellipse 50% 46% at 50% 50%,transparent 50%,black 56%,black 66%,transparent 71%);
+  mask:radial-gradient(ellipse 50% 46% at 50% 50%,transparent 50%,black 56%,black 66%,transparent 71%);
+  opacity:.2}
+
+/* ── APERTURE VENTS: teal/gold drive ports ── */
+.s-apertures{left:160px;right:160px;top:126px;height:48px;border-radius:50%;
+  transform:translateZ(20px) rotate(0deg);
+  background:conic-gradient(from 10deg,
+    transparent 0 22deg,rgba(57,223,200,.5) 22deg 30deg,
+    transparent 30deg 98deg,rgba(255,194,92,.46) 98deg 106deg,
+    transparent 106deg 178deg,rgba(57,223,200,.44) 178deg 186deg,
+    transparent 186deg 254deg,rgba(255,194,92,.38) 254deg 262deg,
+    transparent 262deg 360deg);
+  -webkit-mask:radial-gradient(ellipse 50% 46% at 50% 50%,transparent 32%,black 40%,black 54%,transparent 60%);
+  mask:radial-gradient(ellipse 50% 46% at 50% 50%,transparent 32%,black 40%,black 54%,transparent 60%);
+  opacity:.1;transition:opacity .4s ease;will-change:transform,opacity}
+
+/* ── SPECULAR HIGHLIGHT: follows mouse ── */
+.s-shine{inset:8px 8px 116px;border-radius:50%;
+  transform:translateZ(24px);
+  background:
+    radial-gradient(circle at var(--mx,50%) var(--my,50%),rgba(255,255,255,.9) 0 5%,rgba(255,255,255,.2) 14%,transparent 28%),
+    linear-gradient(135deg,rgba(255,255,255,.3),rgba(255,255,255,0) 36%,rgba(255,255,255,.08) 58%,transparent 76%);
+  mix-blend-mode:screen;opacity:.84}
+
+/* ── ENGAGE TEXT: arcs along lower disc belly ── */
+.engage-svg{inset:0;transform:translateY(0) translateZ(28px);
+  filter:drop-shadow(0 0 8px rgba(255,255,255,.56)) drop-shadow(0 0 26px rgba(255,255,255,.4)) drop-shadow(0 1px 1px rgba(146,162,178,.48))}
+.engage-text{font-family:Orbitron,Inter,sans-serif;font-size:18px;font-weight:800;letter-spacing:.34em;text-transform:uppercase;fill:rgba(244,249,254,.96)}
+
+/* ─────────────────────────────────────────────
+   UNDERSIDE VEIL — sibling inside tilt-body
+   Repositioned for 480×300 saucer layout
+   NO filter, translateZ(28px), mix-blend-mode:screen
+───────────────────────────────────────────── */
+.underside-veil{
+  position:absolute;left:50%;top:50%;
+  width:320px;height:148px;
+  margin:82px 0 0 -160px; /* 82px below tilt-body center = belly zone */
+  border-radius:50%;
+  transform:translateZ(28px) translateY(0);
+  mix-blend-mode:screen;opacity:0;pointer-events:none;will-change:opacity,transform;
+  background:
+    radial-gradient(circle at 50% 48%,rgba(57,223,200,.98) 0 4%,rgba(57,223,200,.64) 10%,rgba(57,223,200,.22) 24%,rgba(57,223,200,.05) 42%,transparent 58%),
+    conic-gradient(from 0deg,
+      transparent 0deg 14deg,rgba(255,220,140,.88) 18deg 28deg,
+      transparent 32deg 74deg,rgba(57,223,200,.94) 78deg 90deg,
+      transparent 94deg 134deg,rgba(255,220,140,.84) 138deg 148deg,
+      transparent 152deg 194deg,rgba(255,255,255,.72) 198deg 206deg,
+      transparent 210deg 254deg,rgba(57,223,200,.9) 258deg 270deg,
+      transparent 274deg 314deg,rgba(255,220,140,.82) 318deg 328deg,
+      transparent 332deg 360deg),
+    radial-gradient(circle at 50% 48%,transparent 34%,rgba(57,223,200,.3) 38%,rgba(57,223,200,.08) 46%,transparent 54%)}
+.underside-veil::before{content:"";position:absolute;inset:18px;border-radius:50%;
+  background:conic-gradient(from 22deg,
+    transparent 0deg 28deg,rgba(57,223,200,.96) 32deg 40deg,
+    transparent 44deg 118deg,rgba(255,220,140,.9) 122deg 130deg,
+    transparent 134deg 208deg,rgba(57,223,200,.92) 212deg 220deg,
+    transparent 224deg 298deg,rgba(255,255,255,.78) 302deg 310deg,transparent 314deg 360deg);
+  -webkit-mask:radial-gradient(circle,transparent 32%,black 38%,black 52%,transparent 57%);
+  mask:radial-gradient(circle,transparent 32%,black 38%,black 52%,transparent 57%);
+  mix-blend-mode:screen}
+
+/* ── caption ── */
+.caption{position:absolute;left:50%;bottom:-18px;transform:translateX(-50%);white-space:nowrap;z-index:8;
+  font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:rgba(75,92,108,.72);
+  padding:10px 20px;border-radius:999px;
+  background:rgba(255,255,255,.3);
+  box-shadow:12px 12px 26px rgba(166,180,196,.26),-10px -10px 20px rgba(255,255,255,.86);
+  backdrop-filter:blur(6px)}
+
+/* ─── BIOMEMETIC KEYFRAMES ─── */
+@keyframes ringA{to{transform:translateZ(16px) rotate(360deg)}}
+@keyframes ringB{to{transform:translateZ(18px) rotate(-540deg)}}
+@keyframes aptPulse{0%,100%{opacity:.86;transform:translateZ(20px) rotate(0deg) scale(1)}50%{opacity:1;transform:translateZ(20px) rotate(180deg) scale(1.04)}}
+@keyframes aptCharge{0%{transform:translateZ(20px) rotate(0deg);opacity:.9}100%{transform:translateZ(20px) rotate(360deg);opacity:1}}
+@keyframes undersideSpin{to{transform:translateZ(28px) rotate(360deg)}}
+@keyframes domePulse{0%,100%{box-shadow:-18px -22px 28px rgba(255,255,255,.97),18px 24px 32px rgba(150,164,182,.54),inset -10px -10px 16px rgba(255,255,255,.58),inset 8px 10px 16px rgba(166,180,198,.24)}50%{box-shadow:-22px -28px 34px rgba(255,255,255,.99),22px 28px 38px rgba(146,160,178,.6),inset -12px -12px 20px rgba(255,255,255,.66),inset 10px 12px 20px rgba(162,176,194,.28),0 0 24px rgba(57,223,200,.1)}}
+
+/* hover: rings and apertures wake up */
+.scene[data-state="hover"] .s-ring-a{opacity:.88;animation:ringA 6s linear infinite}
+.scene[data-state="hover"] .s-ring-b{opacity:.50;animation:ringB 9s linear infinite}
+.scene[data-state="hover"] .s-apertures{opacity:.86;animation:aptPulse 3.4s ease-in-out infinite}
+.scene[data-state="hover"] .s-dome{animation:domePulse 3s ease-in-out infinite}
+
+/* charge: full intensity */
+.scene[data-state="charge"] .s-ring-a{opacity:.96;animation:ringA 2.2s linear infinite}
+.scene[data-state="charge"] .s-ring-b{opacity:.64;animation:ringB 3.1s linear infinite}
+.scene[data-state="charge"] .s-apertures{opacity:1;animation:aptCharge 1.8s linear infinite}
+.scene[data-state="charge"] .s-dome{animation:domePulse 1s ease-in-out infinite}
+.scene[data-state="charge"] .underside-veil{animation:undersideSpin 4s linear infinite}
+</style>
+</head>
+<body>
+<main class="stage">
+  <section class="panel" aria-label="Repulsine launch control — pass 2M">
+    <div class="panel-tag">Vril Interface · 2M · true Haunebu hull · dome + disc + triebwerk · no core orb</div>
+    <div class="scene" id="scene" data-state="idle">
+      <div class="underlay" aria-hidden="true">
+        <div class="aura"></div>
+        <div class="well"></div>
+        <div class="field-shell" id="fieldShell"></div>
+        <div class="force-ring" id="forceRing"></div>
+        <div class="shadow-umbra" id="shadowUmbra"></div>
+      </div>
+      <div class="tilt-stage">
+        <div class="tilt-body" id="tiltBody">
+          <button class="saucer" id="saucer" aria-label="Engage Haunebu launch sequence">
+            <!-- Haunebu shape: disc → equatorial ring → dome top → belly bottom -->
+            <div class="s-disc"></div>
+            <div class="s-equator"></div>
+            <div class="s-dome"></div>
+            <div class="s-dome-rim"></div>
+            <div class="s-belly"></div>
+            <div class="s-ring-a"></div>
+            <div class="s-ring-b"></div>
+            <div class="s-seams"></div>
+            <div class="s-apertures"></div>
+            <div class="s-shine" id="sShine"></div>
+            <svg class="engage-svg" viewBox="0 0 480 300" aria-hidden="true">
+              <defs>
+                <radialGradient id="eg2m" cx="50%" cy="50%" r="60%">
+                  <stop offset="0%" stop-color="#ffffff"/>
+                  <stop offset="28%" stop-color="#fafcff"/>
+                  <stop offset="68%" stop-color="#dce8f2"/>
+                  <stop offset="100%" stop-color="#c4d2de"/>
+                </radialGradient>
+                <!-- arc sits on lower disc belly, matches equatorial curve -->
+                <path id="ea2m" d="M 116 192 A 124 28 0 0 0 364 192"/>
+              </defs>
+              <text class="engage-text" fill="url(#eg2m)">
+                <textPath href="#ea2m" startOffset="50%" text-anchor="middle">ENGAGE</textPath>
+              </text>
+            </svg>
+          </button>
+          <!-- UNDERSIDE VEIL: sibling — translateZ(28px), mix-blend-mode:screen, no filter -->
+          <div class="underside-veil" id="sUnderside"></div>
+        </div>
+      </div>
+      <div class="caption" id="caption">Hover · tilt toward top to reveal Triebwerk · click to charge</div>
+    </div>
+    <div class="panel-note">Haunebu Coanda Hull · Thule Triebwerk · pass 2M</div>
+  </section>
+</main>
+<script>
+(() => {
+  const scene=document.getElementById('scene'), tiltBody=document.getElementById('tiltBody'),
+    saucer=document.getElementById('saucer'), sShine=document.getElementById('sShine'),
+    sUnderside=document.getElementById('sUnderside'), fieldShell=document.getElementById('fieldShell'),
+    forceRing=document.getElementById('forceRing'), shadowUmbra=document.getElementById('shadowUmbra'),
+    caption=document.getElementById('caption');
+  const clamp=(v,lo,hi)=>Math.min(hi,Math.max(lo,v));
+  let charging=false,chargeLevel=0,rafId=null,lastRotX=0,lastRotY=0;
+
+  function setUnderside(){
+    const bf=clamp(-lastRotX/18,0,1);
+    const cf=chargeLevel*0.52;
+    const u=Math.max(bf,cf);
+    sUnderside.style.opacity=u.toFixed(3);
+    sUnderside.style.transform=`translateZ(28px) translateY(${(-bf*18).toFixed(1)}px) scale(${(0.9+u*0.12).toFixed(3)})`;
+  }
+
+  function applyTilt(e){
+    const r=scene.getBoundingClientRect();
+    const cx=r.left+r.width/2, cy=r.top+r.height/2;
+    const nx=clamp((e.clientX-cx)/(r.width/2),-1,1);
+    const ny=clamp((e.clientY-cy)/(r.height/2),-1,1);
+    lastRotY=nx*18; lastRotX=ny*20;
+    tiltBody.style.transform=`rotateX(${lastRotX.toFixed(2)}deg) rotateY(${lastRotY.toFixed(2)}deg)`;
+    const sr=saucer.getBoundingClientRect();
+    const mx=((e.clientX-sr.left)/sr.width)*100;
+    const my=((e.clientY-sr.top)/sr.height)*100;
+    sShine.style.setProperty('--mx',`${clamp(mx,0,100).toFixed(1)}%`);
+    sShine.style.setProperty('--my',`${clamp(my,0,100).toFixed(1)}%`);
+    setUnderside();
+  }
+
+  function resetTilt(){
+    lastRotX=0; lastRotY=0;
+    tiltBody.style.transform='rotateX(0deg) rotateY(0deg)';
+    sShine.style.setProperty('--mx','50%');
+    sShine.style.setProperty('--my','50%');
+    setUnderside();
+  }
+
+  function tickCharge(){
+    chargeLevel=charging?Math.min(chargeLevel+0.011,1):Math.max(chargeLevel-0.014,0);
+    const c=chargeLevel;
+    const shellOpacity=c<0.08?0:(c-0.08)/0.92*0.98;
+    const shellScale=c<0.08?0.01:0.18+c*2.72;
+    fieldShell.style.opacity=shellOpacity.toFixed(3);
+    fieldShell.style.transform=`translate(-50%,-50%) scale(${shellScale.toFixed(3)}) translateY(${(-8-c*50).toFixed(1)}px)`;
+    forceRing.style.opacity=(c<0.10?0:0.75+(c-0.10)/0.90*0.25).toFixed(3);
+    forceRing.style.transform=`translate(-50%,-50%) translateY(${(14+c*30).toFixed(1)}px) scale(${(0.92+c*0.40).toFixed(3)})`;
+    const liftPx=c<0.45?-(c/0.45)*22:-22-((c-0.45)/0.55)*77;
+    saucer.style.transform=`translateY(${liftPx.toFixed(2)}px)`;
+    shadowUmbra.style.transform=`translate(-50%,-50%) translateY(${(168+c*112).toFixed(1)}px) scale(${(1+c*0.55).toFixed(3)})`;
+    shadowUmbra.style.filter=`blur(${(12+c*22).toFixed(1)}px)`;
+    shadowUmbra.style.opacity=(0.3-c*0.18).toFixed(3);
+    setUnderside();
+    if(c>0.985) caption.textContent='Thule Triebwerk engaged — field threshold breached';
+    else if(charging) caption.textContent=`Charging Vril capacitors… ${Math.round(c*100)}%`;
+    else if(c<0.02) caption.textContent='Hover · tilt toward top to reveal Triebwerk · click to charge';
+    else caption.textContent=`Discharge… ${Math.round(c*100)}%`;
+    if(charging||c>0.005) rafId=requestAnimationFrame(tickCharge);
+    else{rafId=null;resetTilt();}
+  }
+
+  scene.addEventListener('pointerenter',()=>{if(!charging&&chargeLevel<0.02)scene.dataset.state='hover';});
+  scene.addEventListener('pointermove',applyTilt);
+  scene.addEventListener('pointerleave',()=>{resetTilt();if(!charging&&chargeLevel<0.02)scene.dataset.state='idle';});
+  scene.addEventListener('pointerdown',(e)=>{
+    e.preventDefault();
+    charging=!charging;
+    scene.dataset.state=charging?'charge':'hover';
+    if(!rafId)rafId=requestAnimationFrame(tickCharge);
+  });
+  resetTilt();
+})();
+</script>
+</body>
+</html>

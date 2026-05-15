@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Repulsine Implosion Dynamics</title>
+  
+  <style>
+    :root {
+      /* Neutral Base & Typography */
+      --font-body: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      --accent: #0f766e; /* Teal accent per design guidelines */
+      --accent-glow: rgba(15, 118, 110, 0.4);
+      
+      /* Light Mode Defaults */
+      --bg-color: #fafafa;
+      --surface-color: #ffffff;
+      --text-main: #171717;
+      --text-muted: #525252;
+      --border-color: #e5e5e5;
+    }
+
+    /* Dark Mode Overrides */
+    [data-theme="dark"] {
+      --bg-color: #0a0a0a;
+      --surface-color: #171717;
+      --text-main: #f5f5f5;
+      --text-muted: #a3a3a3;
+      --border-color: #262626;
+      --accent: #2dd4bf;
+      --accent-glow: rgba(45, 212, 191, 0.2);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--font-body);
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      overflow: hidden;
+      transition: background-color 0.3s, color 0.3s;
+    }
+
+    /* Header & Navigation */
+    header {
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      padding: 1.5rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 100;
+      pointer-events: none; /* Let clicks pass through to 3D canvas */
+    }
+
+    .header-controls {
+      pointer-events: auto;
+      display: flex;
+      gap: 1rem;
+      align-items: center;
+    }
+
+    button {
+      background: var(--surface-color);
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      padding: 0.5rem 1rem;
+      border-radius: 4px;
+      font-size: 0.875rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: var(--font-body);
+    }
+    
+    button:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    h1 {
+      font-size: 1.25rem;
+      font-weight: 600;
+      pointer-events: auto;
+    }
+
+    /* 3D Canvas */
+    #canvas-container {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100vw; height: 100vh;
+      z-index: 1;
+    }
+
+    /* Hover UI Components */
+    #svg-overlay {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100vw; height: 100vh;
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    #info-panel {
+      position: absolute;
+      right: 2rem;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 320px;
+      background: var(--surface-color);
+      border: 1px solid var(--border-color);
+      padding: 1.5rem;
+      border-radius: 8px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.4s ease, transform 0.4s ease;
+      z-index: 20;
+    }
+
+    #info-panel.visible {
+      opacity: 1;
+      transform: translateY(-50%) translateX(0);
+    }
+
+    .panel-title {
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+      color: var(--accent);
+    }
+
+    .panel-desc {
+      font-size: 0.875rem;
+      line-height: 1.5;
+      color: var(--text-muted);
+    }
+
+    .panel-metrics {
+      margin-top: 1rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--border-color);
+      font-family: var(--font-body);
+      font-variant-numeric: tabular-nums lining-nums;
+      font-size: 0.875rem;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    /* Loader & Error Screens */
+    #overlay {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100vw; height: 100vh;
+      background: var(--bg-color);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 999;
+      transition: opacity 0.6s ease;
+    }
+
+    .spinner {
+      width: 40px; height: 40px;
+      border: 3px solid var(--border-color);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin { 100% { transform: rotate(360deg); } }
+
+    #error-screen {
+      display: none;
+      text-align: center;
+      padding: 2rem;
+    }
+  </style>
+
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body>
+
+  <script>
+    try {
+      const canvas = document.createElement('canvas');
+      const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+      if (!gl) throw new Error('WebGL not supported');
+    } catch (e) {
+      document.write('<div id="error-screen" style="display:block;"><h2>System Error</h2><p>Your browser or device does not support WebGL, which is required for this 3D demonstration.</p></div>');
+    }
+  </script>
+
+  <div id="overlay"><div class="spinner"></div></div>
+
+  <header>
+    <h1>Repulsine Implosion Dynamics</h1>
+    <div class="header-controls">
+      <button onclick="window.location.href='/'">← Back to Home</button>
+      <button id="theme-toggle">Toggle Theme</button>
+    </div>
+  </header>
+
+  <div id="canvas-container"></div>
+
+  <svg id="svg-overlay">
+    <line id="connector" x1="0" y1="0" x2="0" y2="0" stroke="var(--accent)" stroke-width="1.5" stroke-dasharray="4 4" opacity="0" style="transition: opacity 0.3s;" />
+    <circle id="target-dot" cx="0" cy="0" r="4" fill="var(--accent)" opacity="0" style="transition: opacity 0.3s;" />
+  </svg>
+
+  <div id="info-panel">
+    <div class="panel-title" id="p-title">Component Name</div>
+    <div class="panel-desc" id="p-desc">Description goes here.</div>
+    <div class="panel-metrics">
+      <span>Diamagnetic State:</span>
+      <span id="p-metric" style="color: var(--accent);">Active</span>
+    </div>
+  </div>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+    // 1. Scene Setup
+    const container = document.getElementById('canvas-container');
+    const scene = new THREE.Scene();
+    
+    const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
+    camera.position.set(0, 5, 12);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    container.appendChild(renderer.domElement);
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    controls.minDistance = 5;
+    controls.maxDistance = 25;
+
+    // 2. Lighting (Restrained and Purposeful)
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+    scene.add(ambientLight);
+
+    const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
+    dirLight.position.set(5, 10, 7);
+    scene.add(dirLight);
+
+    // 3. Materials
+    const aluminumMat = new THREE.MeshStandardMaterial({ 
+      color: 0xa0a5a9, metalness: 0.8, roughness: 0.3, side: THREE.DoubleSide 
+    });
+    const copperMat = new THREE.MeshStandardMaterial({ 
+      color: 0xb87333, metalness: 0.9, roughness: 0.2 
+    });
+    const darkMetalMat = new THREE.MeshStandardMaterial({ 
+      color: 0x222222, metalness: 0.7, roughness: 0.6 
+    });
+
+    // 4. Constructing the Repulsine
+    const craftGroup = new THREE.Group();
+    scene.add(craftGroup);
+
+    // Interactive targets array
+    const interactables = [];
+
+    // Part A: Suction Chamber (Top Dome)
+    const domePoints = [
+      new THREE.Vector2(0.2, 2.0),
+      new THREE.Vector2(1.5, 1.8),
+      new THREE.Vector2(2.8, 0.5)
+    ];
+    const domeGeo = new THREE.LatheGeometry(domePoints, 64);
+    const dome = new THREE.Mesh(domeGeo, aluminumMat);
+    dome.userData = {
+      title: "Suction Chamber",
+      desc: "Regulates thermal dynamics. The cycloidal airflow cools the system, generating a vacuum and inducing centripetence.",
+      metric: "ΔT: -14.5°C"
+    };
+    craftGroup.add(dome);
+    interactables.push(dome);
+
+    // Part B: Copper Cooling Coils (Inside/Under Dome)
+    for (let i = 0; i < 3; i++) {
+      const coil = new THREE.Mesh(new THREE.TorusGeometry(1.2 + (i * 0.4), 0.04, 16, 64), copperMat);
+      coil.rotation.x = Math.PI / 2;
+      coil.position.y = 1.6 - (i * 0.3);
+      craftGroup.add(coil);
+    }
+
+    // Part C: Whorl-Pipes & Aerodynamic Shell (Middle Rim)
+    const rimPoints = [
+      new THREE.Vector2(2.8, 0.5),
+      new THREE.Vector2(4.5, 0.2),
+      new THREE.Vector2(4.5, 0.0),
+      new THREE.Vector2(2.5, -0.2)
+    ];
+    const rimGeo = new THREE.LatheGeometry(rimPoints, 64);
+    const rim = new THREE.Mesh(rimGeo, aluminumMat);
+    rim.userData = {
+      title: "Whorl-Pipes & Rim",
+      desc: "Tangentially installed pipes that concentrate and compact water/air using a double cycloid spiral curve.",
+      metric: "RPM: 12,400"
+    };
+    craftGroup.add(rim);
+    interactables.push(rim);
+
+    // Part D: Rotor Assembly (Bottom Base)
+    const basePoints = [
+      new THREE.Vector2(2.5, -0.2),
+      new THREE.Vector2(1.0, -1.0),
+      new THREE.Vector2(0.0, -1.2)
+    ];
+    const baseGeo = new THREE.LatheGeometry(basePoints, 64);
+    const base = new THREE.Mesh(baseGeo, darkMetalMat);
+    base.userData = {
+      title: "Rotor & Stabilizers",
+      desc: "High-precision gyroscopes maintaining wobble-free stability. Creates the primary diamagnetic levitational field.",
+      metric: "Lift: 4.2 kN"
+    };
+    craftGroup.add(base);
+    interactables.push(base);
+
+    // 5. Interaction & Raycasting Logic
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+    let hoveredObject = null;
+
+    // DOM Elements for UI overlay
+    const svgOverlay = document.getElementById('svg-overlay');
+    const connector = document.getElementById('connector');
+    const targetDot = document.getElementById('target-dot');
+    const infoPanel = document.getElementById('info-panel');
+    const pTitle = document.getElementById('p-title');
+    const pDesc = document.getElementById('p-desc');
+    const pMetric = document.getElementById('p-metric');
+
+    window.addEventListener('mousemove', (event) => {
+      mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+      mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+      raycaster.setFromCamera(mouse, camera);
+      const intersects = raycaster.intersectObjects(interactables);
+
+      if (intersects.length > 0) {
+        if (hoveredObject !== intersects[0].object) {
+          hoveredObject = intersects[0].object;
+          
+          // Update UI Text
+          pTitle.innerText = hoveredObject.userData.title;
+          pDesc.innerText = hoveredObject.userData.desc;
+          pMetric.innerText = hoveredObject.userData.metric;
+          
+          // Fade In Elements
+          infoPanel.classList.add('visible');
+          connector.style.opacity = '1';
+          targetDot.style.opacity = '1';
+          
+          // Emphasize hovered part
+          document.body.style.cursor = 'pointer';
+        }
+      } else {
+        if (hoveredObject !== null) {
+          hoveredObject = null;
+          infoPanel.classList.remove('visible');
+          connector.style.opacity = '0';
+          targetDot.style.opacity = '0';
+          document.body.style.cursor = 'default';
+        }
+      }
+    });
+
+    // Handle Window Resize
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    // Remove Loader once scene is ready
+    window.onload = () => {
+      setTimeout(() => {
+        const overlay = document.getElementById('overlay');
+        overlay.style.opacity = '0';
+        setTimeout(() => overlay.style.display = 'none', 600);
+      }, 800);
+    };
+
+    // 6. Theme Toggling
+    const themeBtn = document.getElementById('theme-toggle');
+    themeBtn.addEventListener('click', () => {
+      const currentTheme = document.documentElement.getAttribute('data-theme');
+      document.documentElement.setAttribute('data-theme', currentTheme === 'dark' ? 'light' : 'dark');
+    });
+
+    // 7. Animation Loop
+    const tempV = new THREE.Vector3();
+
+    function animate() {
+      requestAnimationFrame(animate);
+
+      // Gentle continuous rotation of the rotor base
+      craftGroup.rotation.y += 0.002;
+      base.rotation.y -= 0.01; // Counter-rotation for the engine base
+
+      controls.update();
+
+      // Update Line Coordinates if hovering
+      if (hoveredObject) {
+        // Get the bounding sphere center of the geometry for a stable anchor point
+        hoveredObject.geometry.computeBoundingSphere();
+        tempV.copy(hoveredObject.geometry.boundingSphere.center);
+        
+        // Apply object and group transforms to get world position
+        tempV.applyMatrix4(hoveredObject.matrixWorld);
+        
+        // Project to 2D screen space
+        tempV.project(camera);
+        
+        const x = (tempV.x * 0.5 + 0.5) * window.innerWidth;
+        const y = (tempV.y * -0.5 + 0.5) * window.innerHeight;
+
+        // Position the target dot
+        targetDot.setAttribute('cx', x);
+        targetDot.setAttribute('cy', y);
+
+        // Draw line from dot to the info panel (which is fixed on the right)
+        const panelRect = infoPanel.getBoundingClientRect();
+        connector.setAttribute('x1', x);
+        connector.setAttribute('y1', y);
+        connector.setAttribute('x2', panelRect.left);
+        connector.setAttribute('y2', panelRect.top + (panelRect.height / 2));
+      }
+
+      renderer.render(scene, camera);
+    }
+
+    animate();
+  </script>
+</body>
+</html>
