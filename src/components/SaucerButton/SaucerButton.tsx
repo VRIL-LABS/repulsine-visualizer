@@ -90,7 +90,7 @@ export function SaucerButton({ onEngage }: SaucerButtonProps) {
   }, [setUnderside]);
 
   // Stable ref so tickCharge can schedule itself without a self-reference TDZ issue
-  const tickChargeRef = useRef<() => void>(null!);
+  const tickChargeRef = useRef<(() => void) | null>(null);
 
   const tickCharge = useCallback(() => {
     const charging = chargingRef.current;
@@ -144,7 +144,7 @@ export function SaucerButton({ onEngage }: SaucerButtonProps) {
     }
 
     if (charging || c > 0.005) {
-      rafIdRef.current = requestAnimationFrame(tickChargeRef.current);
+      rafIdRef.current = requestAnimationFrame(() => tickChargeRef.current?.());
     } else {
       rafIdRef.current = null;
       resetTilt();
@@ -159,7 +159,7 @@ export function SaucerButton({ onEngage }: SaucerButtonProps) {
   const toggleCharge = useCallback(() => {
     chargingRef.current = !chargingRef.current;
     setSceneState(chargingRef.current ? "charge" : "hover");
-    if (!rafIdRef.current)
+    if (!rafIdRef.current && tickChargeRef.current)
       rafIdRef.current = requestAnimationFrame(tickChargeRef.current);
   }, []);
 

@@ -34,7 +34,9 @@ export function RepulsineScene({ onBack }: RepulsineSceneProps) {
   const [isExploded, setIsExploded] = useState(false);
   const [theme, setTheme] = useState<"auto" | "dark" | "light">("dark");
   const [hoveredPart, setHoveredPart] = useState<HoveredPart | null>(null);
-  // Lazy initializer: check WebGL support once on the client; assume supported during SSR.
+  // Lazy initializer: check WebGL support once on the client.
+  // RepulsineScene is always loaded with { ssr: false }, so typeof window
+  // is never 'undefined' here and there is no risk of an SSR/hydration mismatch.
   const [webglSupported] = useState<boolean>(() =>
     typeof window !== "undefined" ? isWebGLAvailable() : true
   );
