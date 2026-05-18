@@ -16,11 +16,28 @@ interface RepulsineSceneProps {
   onBack: () => void;
 }
 
+/** Returns true when the browser supports WebGL. */
+function isWebGLAvailable(): boolean {
+  try {
+    const canvas = document.createElement("canvas");
+    return !!(
+      window.WebGLRenderingContext &&
+      (canvas.getContext("webgl") || canvas.getContext("experimental-webgl"))
+    );
+  } catch {
+    return false;
+  }
+}
+
 export function RepulsineScene({ onBack }: RepulsineSceneProps) {
   const [autoRotate, setAutoRotate] = useState(true);
   const [isExploded, setIsExploded] = useState(false);
   const [theme, setTheme] = useState<"auto" | "dark" | "light">("dark");
   const [hoveredPart, setHoveredPart] = useState<HoveredPart | null>(null);
+  // Lazy initializer: check WebGL support once on the client; assume supported during SSR.
+  const [webglSupported] = useState<boolean>(() =>
+    typeof window !== "undefined" ? isWebGLAvailable() : true
+  );
   const themes: Array<"auto" | "dark" | "light"> = ["dark", "light", "auto"];
   const themeIdx = useRef(0);
 
@@ -42,6 +59,49 @@ export function RepulsineScene({ onBack }: RepulsineSceneProps) {
     document.body.style.overflow = "hidden";
     return () => { document.body.style.overflow = ""; };
   }, []);
+
+  if (!webglSupported) {
+    return (
+      <div
+        style={{
+          position: "fixed",
+          inset: 0,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          background: bgColor,
+          color: isDark ? "#f5f5f5" : "#171717",
+          fontFamily: "system-ui, sans-serif",
+          gap: "16px",
+          padding: "24px",
+          textAlign: "center",
+        }}
+      >
+        <p style={{ fontSize: "18px", fontWeight: 600 }}>WebGL not available</p>
+        <p style={{ fontSize: "14px", color: isDark ? "#a3a3a3" : "#525252", maxWidth: "360px" }}>
+          Your browser or device does not support WebGL, which is required for
+          the 3D Repulsine visualizer. Try updating your browser or enabling
+          hardware acceleration.
+        </p>
+        <button
+          onClick={onBack}
+          style={{
+            marginTop: "8px",
+            padding: "10px 24px",
+            borderRadius: "6px",
+            border: "1px solid #0f766e",
+            background: "transparent",
+            color: "#0f766e",
+            fontSize: "14px",
+            cursor: "pointer",
+          }}
+        >
+          ← Back
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div

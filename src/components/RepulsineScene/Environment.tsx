@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useMemo, useEffect } from "react";
 import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
 
@@ -9,8 +9,6 @@ interface EnvironmentProps {
 }
 
 export function Environment({ isDark }: EnvironmentProps) {
-  const ringMatRef = useRef<THREE.LineDashedMaterial>(null);
-
   const bunkerPoints = [
     new THREE.Vector2(0, -5),
     new THREE.Vector2(40, -5),
@@ -23,32 +21,45 @@ export function Environment({ isDark }: EnvironmentProps) {
   const industrialColor = isDark ? 0x06090c : 0xd8e4ec;
   const ringColor = isDark ? 0x0f766e : 0x0b5c56;
 
-  // Telemetry floor rings
-  const ringLines: THREE.Line[] = [];
-  const ringMat = new THREE.LineDashedMaterial({
-    color: ringColor,
-    linewidth: 1,
-    dashSize: 0.5,
-    gapSize: 2.5,
-    transparent: true,
-    opacity: 0.2,
-  });
+  // Memoize ring geometry and material to prevent GPU leaks on re-render
+  const { ringLines, ringMat } = useMemo(() => {
+    const mat = new THREE.LineDashedMaterial({
+      color: ringColor,
+      linewidth: 1,
+      dashSize: 0.5,
+      gapSize: 2.5,
+      transparent: true,
+      opacity: 0.2,
+    });
 
-  for (let i = 0; i < 6; i++) {
-    const r = 5 + i * 6;
-    const curve = new THREE.EllipseCurve(0, 0, r, r, 0, Math.PI * 2, false, 0);
-    const points = curve.getPoints(64);
-    const geo = new THREE.BufferGeometry().setFromPoints(points);
-    const line = new THREE.Line(geo, ringMat);
-    line.computeLineDistances();
-    line.rotation.x = -Math.PI / 2;
-    line.position.y = -4.85;
-    ringLines.push(line);
-  }
+    const lines: THREE.Line[] = [];
+    for (let i = 0; i < 6; i++) {
+      const r = 5 + i * 6;
+      const curve = new THREE.EllipseCurve(0, 0, r, r, 0, Math.PI * 2, false, 0);
+      const points = curve.getPoints(64);
+      const geo = new THREE.BufferGeometry().setFromPoints(points);
+      const line = new THREE.Line(geo, mat);
+      line.computeLineDistances();
+      line.rotation.x = -Math.PI / 2;
+      line.position.y = -4.85;
+      lines.push(line);
+    }
+    return { ringLines: lines, ringMat: mat };
+  }, [ringColor]);
 
+  // Dispose GPU resources when replaced or unmounted
+  useEffect(() => {
+    return () => {
+      ringLines.forEach((l) => l.geometry.dispose());
+      ringMat.dispose();
+    };
+  }, [ringLines, ringMat]);
+
+  // Animate by rotating the rings group (LineDashedMaterial has no dashOffset in r169)
+  const ringsGroupRef = useRef<THREE.Group>(null);
   useFrame((_, delta) => {
-    if (ringMatRef.current) {
-      ringMatRef.current.dashOffset += 10.0 * delta;
+    if (ringsGroupRef.current) {
+      ringsGroupRef.current.rotation.y += 0.4 * delta;
     }
   });
 
@@ -76,17 +87,11 @@ export function Environment({ isDark }: EnvironmentProps) {
       </mesh>
 
       {/* Telemetry rings */}
-      {ringLines.map((line, i) => (
-        <primitive key={i} object={line} />
-      ))}
-
-      {/* Animated ring material ref hack — attach to first ring */}
-      {ringLines[0] && (
-        <primitive
-          object={ringLines[0].material}
-          ref={ringMatRef}
-        />
-      )}
+      <group ref={ringsGroupRef}>
+        {ringLines.map((line, i) => (
+          <primitive key={i} object={line} />
+        ))}
+      </group>
 
       {/* Lighting */}
       <ambientLight intensity={isDark ? 0.15 : 0.6} />

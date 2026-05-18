@@ -244,12 +244,14 @@ export function TelemetryUI({
           <button
             style={autoRotate ? activeBtnStyle : btnStyle}
             onClick={onToggleRotate}
+            aria-pressed={autoRotate}
           >
             Auto-Rotate
           </button>
           <button
             style={isExploded ? activeBtnStyle : btnStyle}
             onClick={onToggleExplode}
+            aria-pressed={isExploded}
           >
             Exploded View
           </button>

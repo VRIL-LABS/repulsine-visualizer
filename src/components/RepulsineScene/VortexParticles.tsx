@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useMemo } from "react";
+import { useRef, useMemo, useEffect } from "react";
 import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
 
@@ -11,9 +11,15 @@ interface VortexParticlesProps {
 const GUST_COUNT = 30;
 const POINTS_PER_GUST = 50;
 
+// Pre-computed stable random parameters — fixed at module load, not re-randomised on re-render
+const GUST_PARAMS = Array.from({ length: GUST_COUNT }, (_, i) => ({
+  startAngleOffset: (i / GUST_COUNT) * Math.PI * 2 + (Math.random() * 0.5 - 0.25),
+  radiusTop: Math.random() * 4 + 4,
+  heightTop: 15 + Math.random() * 5,
+}));
+
 export function VortexParticles({ isDark }: VortexParticlesProps) {
   const windGroupRef = useRef<THREE.Group>(null);
-  const windMatRef = useRef<THREE.LineDashedMaterial>(null);
 
   // Build static gust geometry once — no CPU work per frame
   const gustLines = useMemo(() => {
@@ -31,11 +37,8 @@ export function VortexParticles({ isDark }: VortexParticlesProps) {
 
     for (let i = 0; i < GUST_COUNT; i++) {
       const pts: THREE.Vector3[] = [];
-      const startAngle =
-        (i / GUST_COUNT) * Math.PI * 2 + (Math.random() * 0.5 - 0.25);
-      const radiusTop = Math.random() * 4 + 4;
+      const { startAngleOffset, radiusTop, heightTop } = GUST_PARAMS[i];
       const radiusBottom = 0.2;
-      const heightTop = 15 + Math.random() * 5;
       const heightBottom = -4.9;
 
       for (let j = 0; j <= POINTS_PER_GUST; j++) {
@@ -45,7 +48,7 @@ export function VortexParticles({ isDark }: VortexParticlesProps) {
         const y = heightTop * (1 - t) + heightBottom * t;
         // Logarithmic spiral: angular velocity increases toward center
         // (conservation of angular momentum: ω = L / (m·r²))
-        const theta = startAngle + t * Math.PI * 6;
+        const theta = startAngleOffset + t * Math.PI * 6;
         pts.push(
           new THREE.Vector3(Math.cos(theta) * r, y, Math.sin(theta) * r)
         );
@@ -60,19 +63,21 @@ export function VortexParticles({ isDark }: VortexParticlesProps) {
     return lines;
   }, [isDark]);
 
-  // Grab material reference from the first line
-  const matRef = useMemo(
-    () => (gustLines.length > 0 ? (gustLines[0].material as THREE.LineDashedMaterial) : null),
-    [gustLines]
-  );
+  // Dispose GPU resources when theme changes or component unmounts
+  useEffect(() => {
+    return () => {
+      if (gustLines.length > 0) {
+        const mat = gustLines[0].material as THREE.LineDashedMaterial;
+        gustLines.forEach((l) => l.geometry.dispose());
+        mat.dispose();
+      }
+    };
+  }, [gustLines]);
 
   useFrame((_, delta) => {
-    // Zero-CPU animation: spin the group and offset the dash texture
+    // Zero-CPU animation: spin the group
     if (windGroupRef.current) {
       windGroupRef.current.rotation.y += 1.5 * delta;
-    }
-    if (matRef) {
-      matRef.dashOffset -= 15.0 * delta;
     }
   });
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useMemo, useCallback } from "react";
+import { useRef, useMemo, useCallback, useEffect } from "react";
 import * as THREE from "three";
 import { useFrame, useThree } from "@react-three/fiber";
 import type { HoveredPart } from "./types";
@@ -66,7 +66,7 @@ export function RepulsineDisc({
   const coreRef = useRef<THREE.Mesh>(null);
   const pipeGroupRef = useRef<THREE.Group>(null);
 
-  const { camera, gl, scene: threeScene } = useThree();
+  const { camera, gl } = useThree();
 
   // Target Y positions: [baseY, explodedY]
   const partTargets = useRef<Map<THREE.Object3D, [number, number]>>(new Map());
@@ -120,9 +120,12 @@ export function RepulsineDisc({
   // Track hovered object
   const hoveredRef = useRef<THREE.Object3D | null>(null);
   const originalMatRef = useRef<THREE.Material | THREE.Material[] | null>(null);
+  // Store hovered part metadata separately for continuous screenPos updates
+  const hoveredMetaRef = useRef<Omit<HoveredPart, "screenPos"> | null>(null);
 
   const raycaster = useMemo(() => new THREE.Raycaster(), []);
-  const mouse = useMemo(() => new THREE.Vector2(), []);
+  // Use a ref (not useMemo) so mutation inside the callback doesn't trigger lint warnings
+  const mouseRef = useRef(new THREE.Vector2());
 
   const getInteractables = useCallback((): THREE.Object3D[] => {
     const list: THREE.Object3D[] = [];
@@ -145,11 +148,13 @@ export function RepulsineDisc({
     if (shellRef.current) shellRef.current.rotation.y -= 1.0 * dt;
     if (plateGroupRef.current) plateGroupRef.current.rotation.y -= 3.0 * dt;
 
-    // Pulse core emissive
+    // Pulse core emissive — clamp to non-negative
     if (coreRef.current) {
       const mat = coreRef.current.material as THREE.MeshStandardMaterial;
-      mat.emissiveIntensity =
-        (isDark ? 0.6 : 0.2) + Math.sin(clock.elapsedTime * 2.5) * 0.3;
+      mat.emissiveIntensity = Math.max(
+        0,
+        (isDark ? 0.6 : 0.2) + Math.sin(clock.elapsedTime * 2.5) * 0.3
+      );
     }
 
     // Explode/collapse lerp
@@ -157,6 +162,18 @@ export function RepulsineDisc({
       const target = isExploded ? expY : baseY;
       obj.position.y += (target - obj.position.y) * 0.1;
     });
+
+    // Continuously update screenPos of the hovered object so the SVG
+    // connector tracks it correctly while the craft auto-rotates or the
+    // camera moves.
+    if (hoveredRef.current && hoveredMetaRef.current) {
+      const worldPos = new THREE.Vector3();
+      hoveredRef.current.getWorldPosition(worldPos);
+      worldPos.project(camera);
+      const sx = (worldPos.x * 0.5 + 0.5) * window.innerWidth;
+      const sy = (worldPos.y * -0.5 + 0.5) * window.innerHeight;
+      onHover({ ...hoveredMetaRef.current, screenPos: { x: sx, y: sy } });
+    }
   });
 
   // Register part targets after mount
@@ -172,9 +189,9 @@ export function RepulsineDisc({
 
   const handlePointerMove = useCallback(
     (e: MouseEvent) => {
-      mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
-      mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
-      raycaster.setFromCamera(mouse, camera);
+      mouseRef.current.x = (e.clientX / window.innerWidth) * 2 - 1;
+      mouseRef.current.y = -(e.clientY / window.innerHeight) * 2 + 1;
+      raycaster.setFromCamera(mouseRef.current, camera);
 
       const hits = raycaster.intersectObjects(getInteractables(), false);
       if (hits.length > 0) {
@@ -198,22 +215,14 @@ export function RepulsineDisc({
             l2: string;
           };
 
-          // Project 3D position to screen
-          const worldPos = new THREE.Vector3();
-          obj.getWorldPosition(worldPos);
-          worldPos.project(camera);
-          const sx = (worldPos.x * 0.5 + 0.5) * window.innerWidth;
-          const sy = (worldPos.y * -0.5 + 0.5) * window.innerHeight;
-
-          onHover({
+          hoveredMetaRef.current = {
             name: ud.name ?? "Component",
             desc: ud.desc ?? "",
             v1: ud.v1 ?? "",
             l1: ud.l1 ?? "",
             v2: ud.v2 ?? "",
             l2: ud.l2 ?? "",
-            screenPos: { x: sx, y: sy },
-          });
+          };
         }
       } else {
         if (hoveredRef.current && originalMatRef.current) {
@@ -222,16 +231,21 @@ export function RepulsineDisc({
         }
         hoveredRef.current = null;
         originalMatRef.current = null;
+        hoveredMetaRef.current = null;
         onHover(null);
       }
     },
-    [camera, getInteractables, highlightMat, mouse, onHover, raycaster]
+    [camera, getInteractables, highlightMat, onHover, raycaster]
   );
 
-  // Attach mousemove to canvas
-  useFrame(() => {
-    gl.domElement.onmousemove = handlePointerMove as unknown as (e: MouseEvent) => void;
-  });
+  // Attach mousemove handler once via effect (not per-frame)
+  useEffect(() => {
+    const canvas = gl.domElement;
+    canvas.addEventListener("mousemove", handlePointerMove);
+    return () => {
+      canvas.removeEventListener("mousemove", handlePointerMove);
+    };
+  }, [gl.domElement, handlePointerMove]);
 
   return (
     <group ref={craftRef} position={[0, 5, 0]}>

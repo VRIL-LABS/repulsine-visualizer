@@ -1,6 +1,6 @@
 # Repulsine Visualizer
 
-> A real-time 3D aerodynamics visualization of Viktor Schauberger's **Repulsine** vortex implosion disc — built as a Vercel-ready Next.js 14 application.
+> A real-time 3D aerodynamics visualization of Viktor Schauberger's **Repulsine** vortex implosion disc — built as a Vercel-ready Next.js 16 application.
 
 ![Repulsine Visualizer](https://img.shields.io/badge/Three.js-r169-black?logo=threedotjs) ![R3F](https://img.shields.io/badge/React%20Three%20Fiber-v8-blue) ![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js) ![Vercel](https://img.shields.io/badge/Deploy-Vercel-black?logo=vercel)
 

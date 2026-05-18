@@ -89,6 +89,9 @@ export function SaucerButton({ onEngage }: SaucerButtonProps) {
     setUnderside();
   }, [setUnderside]);
 
+  // Stable ref so tickCharge can schedule itself without a self-reference TDZ issue
+  const tickChargeRef = useRef<() => void>(null!);
+
   const tickCharge = useCallback(() => {
     const charging = chargingRef.current;
     chargeLevelRef.current = charging
@@ -141,16 +144,29 @@ export function SaucerButton({ onEngage }: SaucerButtonProps) {
     }
 
     if (charging || c > 0.005) {
-      rafIdRef.current = requestAnimationFrame(tickCharge);
+      rafIdRef.current = requestAnimationFrame(tickChargeRef.current);
     } else {
       rafIdRef.current = null;
       resetTilt();
     }
   }, [setUnderside, resetTilt, onEngage]);
 
+  // Sync the ref after render so the RAF loop always uses the latest closure
+  useEffect(() => {
+    tickChargeRef.current = tickCharge;
+  }, [tickCharge]);
+
+  const toggleCharge = useCallback(() => {
+    chargingRef.current = !chargingRef.current;
+    setSceneState(chargingRef.current ? "charge" : "hover");
+    if (!rafIdRef.current)
+      rafIdRef.current = requestAnimationFrame(tickChargeRef.current);
+  }, []);
+
   useEffect(() => {
     const scene = sceneRef.current;
-    if (!scene) return;
+    const saucer = saucerRef.current;
+    if (!scene || !saucer) return;
 
     const handlePointerEnter = () => {
       if (!chargingRef.current && chargeLevelRef.current < 0.02)
@@ -164,16 +180,13 @@ export function SaucerButton({ onEngage }: SaucerButtonProps) {
     };
     const handlePointerDown = (e: PointerEvent) => {
       e.preventDefault();
-      chargingRef.current = !chargingRef.current;
-      setSceneState(chargingRef.current ? "charge" : "hover");
-      if (!rafIdRef.current)
-        rafIdRef.current = requestAnimationFrame(tickCharge);
+      toggleCharge();
     };
 
     scene.addEventListener("pointerenter", handlePointerEnter);
     scene.addEventListener("pointermove", handlePointerMove);
     scene.addEventListener("pointerleave", handlePointerLeave);
-    scene.addEventListener("pointerdown", handlePointerDown);
+    saucer.addEventListener("pointerdown", handlePointerDown);
 
     resetTilt();
 
@@ -181,10 +194,10 @@ export function SaucerButton({ onEngage }: SaucerButtonProps) {
       scene.removeEventListener("pointerenter", handlePointerEnter);
       scene.removeEventListener("pointermove", handlePointerMove);
       scene.removeEventListener("pointerleave", handlePointerLeave);
-      scene.removeEventListener("pointerdown", handlePointerDown);
+      saucer.removeEventListener("pointerdown", handlePointerDown);
       if (rafIdRef.current) cancelAnimationFrame(rafIdRef.current);
     };
-  }, [applyTilt, resetTilt, tickCharge]);
+  }, [applyTilt, resetTilt, toggleCharge]);
 
   return (
     <main className={styles.stage}>
@@ -217,6 +230,10 @@ export function SaucerButton({ onEngage }: SaucerButtonProps) {
                 ref={saucerRef}
                 className={styles.saucer}
                 aria-label="Engage Haunebu launch sequence"
+                onClick={(e) => {
+                  // Handle keyboard activation (Enter/Space); pointer already handled by pointerdown
+                  if (e.detail === 0) toggleCharge();
+                }}
               >
                 <div className={styles.sDisc} />
                 <div className={styles.sEquator} />
