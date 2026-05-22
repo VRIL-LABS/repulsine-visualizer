@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Schauberger Repulsine v5 | High-Fidelity Implosion Simulation</title>
+  
+  <style>
+    /* =========================================
+       DESIGN FOUNDATIONS & TYPOGRAPHY
+       (Preserved from Unified v4 foundation)
+       ========================================= */
+    :root {
+      --font-body: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      --accent: #0f766e; 
+      --accent-glow: rgba(15, 118, 110, 0.3);
+      
+      /* Dark Mode Default */
+      --bg-color: #0a0a0a;
+      --surface-color: rgba(23, 23, 23, 0.9);
+      --text-main: #f5f5f5;
+      --text-muted: #a3a3a3;
+      --border-color: rgba(64, 64, 64, 0.8);
+      --backdrop-blur: blur(12px);
+    }
+
+    [data-theme="light"] {
+      --bg-color: #fafafa;
+      --surface-color: rgba(255, 255, 255, 0.9);
+      --text-main: #171717;
+      --text-muted: #525252;
+      --border-color: rgba(229, 229, 229, 0.8);
+    }
+
+    body {
+      margin: 0;
+      overflow: hidden;
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      font-family: var(--font-body);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    #webgl-container { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; }
+    
+    #svg-layer {
+      position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
+      z-index: 2; pointer-events: none;
+    }
+
+    #ui-layer {
+      position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
+      z-index: 10; pointer-events: none; padding: 24px; box-sizing: border-box;
+    }
+
+    /* Telemetry Panel UI */
+    .telemetry-panel {
+      position: absolute;
+      background: var(--surface-color);
+      backdrop-filter: var(--backdrop-blur);
+      border: 1px solid var(--border-color);
+      padding: 16px 20px; border-radius: 8px;
+      pointer-events: auto; width: 340px;
+      display: none; opacity: 0;
+      transition: opacity 0.3s ease, transform 0.3s ease;
+      transform: translateY(10px);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+    }
+
+    h2 { margin: 0 0 8px 0; font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text-main); }
+    p { margin: 0; font-size: 13px; color: var(--text-muted); line-height: 1.6; }
+    
+    .kpi-container { display: flex; gap: 24px; margin-top: 16px; border-top: 1px solid var(--border-color); padding-top: 16px; }
+    .kpi { display: flex; flex-direction: column; }
+    .kpi-val { font-size: 26px; font-weight: 800; color: var(--accent); font-variant-numeric: tabular-nums lining-nums; text-shadow: 0 0 10px var(--accent-glow); }
+    .kpi-lbl { font-size: 11px; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.5px; margin-top: 4px; }
+
+    .theme-toggle {
+      position: absolute; top: 24px; right: 24px;
+      background: var(--surface-color); border: 1px solid var(--border-color);
+      color: var(--text-main); padding: 10px 18px; border-radius: 6px;
+      cursor: pointer; pointer-events: auto; font-family: var(--font-body); font-size: 12px; font-weight: 500;
+      z-index: 20; transition: all 0.2s;
+    }
+    .theme-toggle:hover { background: var(--border-color); transform: translateY(-1px); }
+    
+    #hover-hint {
+      position: absolute; bottom: 24px; left: 50%; transform: translateX(-50%);
+      background: var(--surface-color); padding: 10px 20px; border-radius: 20px;
+      font-size: 12px; color: var(--text-muted); border: 1px solid var(--border-color);
+      pointer-events: auto; box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+
+    /* Device Warning Modal */
+    #compatibility-warning {
+      display: none;
+      position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
+      background: var(--bg-color);
+      z-index: 9999;
+      justify-content: center; align-items: center; text-align: center;
+      padding: 24px; box-sizing: border-box;
+    }
+  </style>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/LuminosityHighPassShader.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
+</head>
+<body>
+
+  <div id="compatibility-warning">
+    <div class="telemetry-panel" style="display: block; opacity: 1; position: static; pointer-events: auto; transform: none;">
+      <h2 style="color: #ef4444;">Hardware Acceleration Required</h2>
+      <p>Your browser or hardware lacks WebGL acceleration required for this high-fidelity cycloidal physics simulation. Please try a modern desktop browser with hardware acceleration enabled.</p>
+    </div>
+  </div>
+
+  <div id="webgl-container"></div>
+  
+  <svg id="svg-layer">
+    <line id="svg-connector" x1="0" y1="0" x2="0" y2="0" stroke="var(--accent)" stroke-width="1.5" stroke-dasharray="6 4" opacity="0"></line>
+  </svg>
+
+  <div id="ui-layer">
+    <button class="theme-toggle" id="theme-toggle">Theme: Dark</button>
+    
+    <div class="telemetry-panel" id="info-panel" style="top: 20%; left: 80px;">
+      <h2 id="panel-title">Component</h2>
+      <p id="panel-desc">Description</p>
+      <div class="kpi-container">
+        <div class="kpi">
+          <span class="kpi-val" id="panel-val-1">0.0</span>
+          <span class="kpi-lbl" id="panel-lbl-1">Metric 1</span>
+        </div>
+        <div class="kpi">
+          <span class="kpi-val" id="panel-val-2">0.0</span>
+          <span class="kpi-lbl" id="panel-lbl-2">Metric 2</span>
+        </div>
+      </div>
+    </div>
+    
+    <div id="hover-hint">Analyze Repulsine Component Telemetry (Hover over 3D Model)</div>
+  </div>
+
+  <script>
+    // ==========================================
+    // 0. BROWSER/DEVICE DETECTION
+    // ==========================================
+    function checkSupport() {
+      try {
+        const canvas = document.createElement('canvas');
+        return !!(window.WebGLRenderingContext && (canvas.getContext('webgl') || canvas.getContext('experimental-webgl')));
+      } catch (e) { return false; }
+    }
+    if (!checkSupport()) {
+      document.getElementById('compatibility-warning').style.display = 'flex';
+      throw new Error("WebGL not supported.");
+    }
+
+    // ==========================================
+    // 1. SCENE SETUP & POST-PROCESSING (High-Fidelity)
+    // ==========================================
+    const container = document.getElementById('webgl-container');
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.FogExp2(0x0a0a0a, 0.012); // Slightly reduced fog for clarity in v5
+
+    const camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.set(0, 18, 40);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "high-performance" });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    container.appendChild(renderer.domElement);
+
+    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    controls.minDistance = 15;
+    controls.maxDistance = 80;
+    controls.maxPolarAngle = Math.PI / 2 - 0.1; // Keep above water plane
+
+    // Unreal Bloom Post-Processing
+    const renderScene = new THREE.RenderPass(scene, camera);
+    const bloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.5, 0.4, 0.85);
+    bloomPass.threshold = 0.2; // Adjusted threshold to isolate high-energy core
+    bloomPass.strength = 1.2;
+    bloomPass.radius = 0.6;
+
+    const composer = new THREE.EffectComposer(renderer);
+    composer.addPass(renderScene);
+    composer.addPass(bloomPass);
+
+    // ==========================================
+    // 2. ENVIRONMENT: THE SECRET BUNKER & WATER
+    // ==========================================
+    // Industrial Metal Bunker (Secret testing room)
+    const roomMat = new THREE.MeshStandardMaterial({ color: 0x1a1d20, roughness: 0.6, metalness: 0.9, side: THREE.BackSide });
+    const room = new THREE.Mesh(new THREE.BoxGeometry(150, 80, 150), roomMat);
+    room.position.y = 30;
+    room.receiveShadow = true;
+    scene.add(room);
+
+    // Structural Floor Grid
+    const gridHelper = new THREE.GridHelper(150, 60, 0x0f766e, 0x222222);
+    gridHelper.position.y = -4.95;
+    gridHelper.material.opacity = 0.2;
+    gridHelper.material.transparent = true;
+    scene.add(gridHelper);
+
+    // Reactive Water Testing Pool (Fluid Dynamic Surface)
+    const waterGeo = new THREE.PlaneGeometry(40, 40, 128, 128); // Increased size and resolution
+    const waterMat = new THREE.MeshStandardMaterial({ color: 0x030303, metalness: 1.0, roughness: 0.02, transparent: true, opacity: 0.9 });
+    const waterPanel = new THREE.Mesh(waterGeo, waterMat);
+    waterPanel.rotation.x = -Math.PI / 2;
+    waterPanel.position.y = -4.9;
+    waterPanel.receiveShadow = true;
+    scene.add(waterPanel);
+
+    // Store base vertices for fluid simulation
+    const waterBase = [];
+    const posAttr = waterGeo.attributes.position;
+    for (let i = 0; i < posAttr.count; i++) {
+      waterBase.push({ x: posAttr.getX(i), y: posAttr.getY(i) });
+    }
+
+    // Lighting Configuration
+    scene.add(new THREE.AmbientLight(0xffffff, 0.3));
+    const mainSpot = new THREE.SpotLight(0xffffff, 2.5, 120, Math.PI/4, 0.3, 1);
+    mainSpot.position.set(10, 40, 10);
+    mainSpot.castShadow = true;
+    mainSpot.shadow.mapSize.width = 2048; mainSpot.shadow.mapSize.height = 2048;
+    scene.add(mainSpot);
+    
+    // Teal Accent Light for atmosphere
+    const accentLight = new THREE.PointLight(0x0f766e, 1.0, 50);
+    accentLight.position.set(-15, 10, -15);
+    scene.add(accentLight);
+
+    // ==========================================
+    // 3. REPULSINE GEOMETRY (Academic Fidelity Iteration v5)
+    // ==========================================
+    const craftGroup = new THREE.Group();
+    craftGroup.position.y = 6;
+    scene.add(craftGroup);
+
+    // Shared Materials
+    const hullMat = new THREE.MeshStandardMaterial({ color: 0x999999, metalness: 0.7, roughness: 0.35 });
+    const copperMat = new THREE.MeshStandardMaterial({ color: 0xc27c4a, metalness: 0.95, roughness: 0.3, emissive: 0x221100 });
+    const highlightMat = new THREE.MeshStandardMaterial({ color: 0x0f766e, metalness: 0.8, roughness: 0.1, emissive: 0x0f766e, emissiveIntensity: 0.8 });
+    const membraneMat = new THREE.MeshStandardMaterial({ color: 0x444444, metalness: 0.9, roughness: 0.6 });
+
+    // 3.1 Ionized Suction Core (High-Energy)
+    const coreMat = new THREE.MeshStandardMaterial({ color: 0x00ffff, emissive: 0x00ffff, emissiveIntensity: 1.2 });
+    const core = new THREE.Mesh(new THREE.SphereGeometry(1.0, 32, 32), coreMat);
+    core.userData = { name: "Diamagnetic Suction Core", desc: "Primary zone of cycloidal air compression and thermal dissociation.", v1: "-18.5 °C", l1: "Core Temp", v2: "0.15 atm", l2: "Static Pressure" };
+    craftGroup.add(core);
+
+    // 3.2 Repulsine Hull (Lathe Profile Updated from Exploded View)
+    const hullPoints = [];
+    hullPoints.push(new THREE.Vector2(0, -1.8));
+    hullPoints.push(new THREE.Vector2(3, -1.8));
+    hullPoints.push(new THREE.Vector2(8, 0));
+    hullPoints.push(new THREE.Vector2(8, 0.5));
+    hullPoints.push(new THREE.Vector2(1.8, 2.8)); // Defined top intake cowl lip
+    hullPoints.push(new THREE.Vector2(0, 2.8));
+    const shellGeo = new THREE.LatheGeometry(hullPoints, 64);
+    const shell = new THREE.Mesh(shellGeo, hullMat);
+    shell.castShadow = true; shell.receiveShadow = true;
+    shell.userData = { name: "Coanda Aerodynamic Hull", desc: "Maintains laminar flow boundary layer to generate negative pressure gradient (Lift).", v1: "12,400", l1: "Operational RPM", v2: "1.4 kg", l2: "Radial Loading" };
+    craftGroup.add(shell);
+    
+    // 3.3 The Boundary Membrane (Exploded View Detail)
+    const membrane = new THREE.Mesh(new THREE.CylinderGeometry(7.8, 7.8, 0.1, 64), membraneMat);
+    membrane.position.y = 0.2;
+    membrane.userData = { name: "Boundary Layer Membrane", desc: "Separates the upper suction chamber from the lower compression zone.", v1: "Aged Steel", l1: "Material", v2: "Stable", l2: "Resonance" };
+    craftGroup.add(membrane);
+
+    // 3.4 Procedural Corrugated "Trout Turbine" Plates (Optimization: InstancedMesh)
+    const plateCount = 3;
+    const innerRadius = 1.0; const outerRadius = 5.8;
+    // High-resolution cylinder for sharp corrugation
+    const basePlateGeo = new THREE.CylinderGeometry(outerRadius, outerRadius, 0.04, 160, 1, true); 
+    const pVerts = basePlateGeo.attributes.position;
+    for(let i=0; i<pVerts.count; i++) {
+        const x = pVerts.getX(i); const z = pVerts.getZ(i);
+        const angle = Math.atan2(z, x);
+        const dist = Math.sqrt(x*x + z*z);
+        // Sharper wave definition mimicking the exploded diagram
+        const wave = Math.sin(angle * 24) * 0.22 * (dist / outerRadius); 
+        pVerts.setY(i, pVerts.getY(i) + wave);
+    }
+    basePlateGeo.computeVertexNormals();
+    
+    const plates = new THREE.InstancedMesh(basePlateGeo, copperMat, plateCount);
+    plates.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    plates.castShadow = true;
+    
+    const dummy = new THREE.Object3D();
+    for(let j = 0; j < plateCount; j++) {
+        dummy.position.y = 0.7 + (j * 0.45);
+        dummy.updateMatrix();
+        plates.setMatrixAt(j, dummy.matrix);
+    }
+    craftGroup.add(plates);
+
+    // Plate Hitbox (for precise raycasting interaction)
+    const plateHitbox = new THREE.Mesh(new THREE.CylinderGeometry(outerRadius, outerRadius, 1.6, 32), new THREE.MeshBasicMaterial({visible: false}));
+    plateHitbox.position.y = 1.2;
+    plateHitbox.userData = { name: "Corrugated Whorl Turbine", desc: "Stacked wavy copper plates mimicking trout-gill dynamics to induce spiraling 'living' water/air flow.", v1: "Copper", l1: "Material", v2: "Cycloidal", l2: "Flow Dynamics" };
+    craftGroup.add(plateHitbox);
+
+    // 3.5 Tangential Vortex Pipes (InstancedMesh)
+    const pipeCount = 8;
+    const vortexPipes = new THREE.InstancedMesh(new THREE.TorusGeometry(1.0, 0.18, 16, 32), copperMat, pipeCount);
+    vortexPipes.castShadow = true;
+    for (let i = 0; i < pipeCount; i++) {
+      const angle = (i / pipeCount) * Math.PI * 2;
+      dummy.position.set(Math.cos(angle) * 3.2, 2.4, Math.sin(angle) * 3.2);
+      dummy.rotation.set(Math.PI / 2, angle, 0); // Correct tangential orientation
+      dummy.updateMatrix();
+      vortexPipes.setMatrixAt(i, dummy.matrix);
+    }
+    craftGroup.add(vortexPipes);
+    
+    // Pipe Hitbox
+    const pipeHitbox = new THREE.Mesh(new THREE.TorusGeometry(3.2, 1.2, 16, 32), new THREE.MeshBasicMaterial({visible: false}));
+    pipeHitbox.position.y = 2.4;
+    pipeHitbox.userData = { name: "Tangential Vortex Spigots", desc: "Guides the compressed air mixture into a precise centripetal cycloidal spiral path.", v1: "8", l1: "Nozzles", v2: "Exotic", l2: "Gas Mixture" };
+    craftGroup.add(pipeHitbox);
+
+    // ==========================================
+    // 4. PHYSICS PARTICLES (Cycloidal Implosion - Requirement 4)
+    // ==========================================
+    const pCount = 5000; // Increased particle density in v5
+    const pGeo = new THREE.BufferGeometry();
+    const pPos = new Float32Array(pCount * 3);
+    const pRadii = new Float32Array(pCount);
+    const pAngles = new Float32Array(pCount);
+    const pSpeeds = new Float32Array(pCount);
+
+    for (let i = 0; i < pCount; i++) {
+      pAngles[i] = Math.random() * Math.PI * 2;
+      pRadii[i] = Math.random() * 12 + 1; // Start wider
+      pSpeeds[i] = Math.random() * 0.5 + 0.5; // Individual particle speed variation
+      pPos[i*3]   = Math.cos(pAngles[i]) * pRadii[i];
+      pPos[i*3+1] = (Math.random() * 25) - 5; 
+      pPos[i*3+2] = Math.sin(pAngles[i]) * pRadii[i];
+    }
+    pGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3));
+    const pMat = new THREE.PointsMaterial({ color: 0x00ffff, size: 0.07, transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending, sizeAttenuation: true });
+    const vortexParticles = new THREE.Points(pGeo, pMat);
+    scene.add(vortexParticles);
+
+    // ==========================================
+    // 5. INTERACTION, UI, & ISO-HIGHLIGHT (Requirement 5)
+    // ==========================================
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+    let hoveredObj = null;
+    let originalMat = null;
+    
+    const panel = document.getElementById('info-panel');
+    const svgConnector = document.getElementById('svg-connector');
+    // Interactable objects including new membrane and spigots
+    const interactables = [core, shell, membrane, plateHitbox, pipeHitbox];
+
+    function toScreenPosition(obj, camera) {
+      const vector = new THREE.Vector3();
+      obj.getWorldPosition(vector);
+      vector.project(camera);
+      return {
+        x: (vector.x * .5 + .5) * window.innerWidth,
+        y: (vector.y * -.5 + .5) * window.innerHeight
+      };
+    }
+
+    // Isolate highlight function for v5
+    function setCraftOpacity(opacity, excludeObj = null) {
+        craftGroup.children.forEach(child => {
+            if(child === excludeObj || child.isInstancedMesh || !child.material) return;
+            // Handle groups (like plateGroup in v4 if it existed, or instances)
+            if(child.isGroup) {
+                child.children.forEach(c => { if(c !== excludeObj) { c.material.transparent = true; c.material.opacity = opacity; } });
+            } else {
+                child.material.transparent = true; 
+                child.material.opacity = opacity;
+            }
+        });
+        // Handle special instanced materials separately to avoid issues
+        if(excludeObj !== plates) { copperMat.transparent = true; copperMat.opacity = Math.max(0.1, opacity); }
+        else { copperMat.opacity = 1.0; }
+    }
+
+    window.addEventListener('mousemove', (e) => {
+      mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+      mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+
+      raycaster.setFromCamera(mouse, camera);
+      const intersects = raycaster.intersectObjects(interactables);
+
+      if (intersects.length > 0) {
+        const obj = intersects[0].object;
+        if (hoveredObj !== obj) {
+          
+          // 1. Reset previous highlights/opacity
+          if (hoveredObj) {
+              if(hoveredObj === plateHitbox) plates.material = originalMat;
+              else if(hoveredObj === pipeHitbox) vortexPipes.material = originalMat;
+              else hoveredObj.material = originalMat;
+          }
+          
+          // 2. Set new hover target
+          hoveredObj = obj;
+          
+          // 3. Apply Teal Highlight Mat
+          if (obj === plateHitbox) { originalMat = plates.material; plates.material = highlightMat; setCraftOpacity(0.15, plates); }
+          else if (obj === pipeHitbox) { originalMat = vortexPipes.material; vortexPipes.material = highlightMat; setCraftOpacity(0.15, vortexPipes); }
+          else { originalMat = obj.material; obj.material = highlightMat; setCraftOpacity(0.15, obj); }
+
+          // 4. Populate UI Panel
+          document.getElementById('panel-title').innerText = obj.userData.name;
+          document.getElementById('panel-desc').innerText = obj.userData.desc;
+          document.getElementById('panel-val-1').innerText = obj.userData.v1;
+          document.getElementById('panel-lbl-1').innerText = obj.userData.l1;
+          document.getElementById('panel-val-2').innerText = obj.userData.v2;
+          document.getElementById('panel-lbl-2').innerText = obj.userData.l2;
+          
+          panel.style.display = 'block';
+          void panel.offsetWidth; // Force reflow
+          panel.style.opacity = '1';
+          panel.style.transform = 'translateY(0)';
+          svgConnector.setAttribute('opacity', '1');
+        }
+      } else {
+        // Handle Mouse Out (Restore State)
+        if (hoveredObj) {
+          if(hoveredObj === plateHitbox) plates.material = originalMat;
+          else if(hoveredObj === pipeHitbox) vortexPipes.material = originalMat;
+          else hoveredObj.material = originalMat;
+          
+          hoveredObj = null;
+          setCraftOpacity(1.0); // Restore full opacity to all parts
+          hullMat.transparent = false; membraneMat.transparent = false; copperMat.transparent = false; // Optimize draw call state
+          
+          panel.style.opacity = '0';
+          panel.style.transform = 'translateY(10px)';
+          svgConnector.setAttribute('opacity', '0');
+          setTimeout(() => { if(!hoveredObj) panel.style.display = 'none'; }, 300);
+        }
+      }
+    });
+
+    // ==========================================
+    // 6. ANIMATION LOOP (Physics, Fluid, & Connector)
+    // ==========================================
+    const clock = new THREE.Clock();
+
+    function animate() {
+      requestAnimationFrame(animate);
+      const delta = clock.getDelta();
+      const time = clock.getElapsedTime();
+      controls.update();
+
+      // Mechanical Rotation (Differential Speeds based on academic text)
+      shell.rotation.y -= 1.2 * delta;
+      membrane.rotation.y -= 1.2 * delta; // Rotates with hull
+      vortexPipes.rotation.y -= 1.2 * delta;
+      
+      plates.rotation.y -= 2.8 * delta; // Internal turbine rotates opposite and faster
+      
+      // Animate Physics Particles (Accurate Centripetal Implosion v5)
+      const positions = vortexParticles.geometry.attributes.position.array;
+      for (let i = 0; i < pCount; i++) {
+        let r = pRadii[i];
+        let speedMult = pSpeeds[i];
+        
+        // 1. Centripetal Pull (Implosion) - Pulls in faster near the core
+        if (r > 0.1) r -= (2.5 + (1.0/r)) * speedMult * delta; 
+        
+        // 2. Angular Velocity Conservation (Spins exponentially faster as radius decreases)
+        let vTheta = (3.5 / (r + 0.1)) * speedMult; 
+        pAngles[i] += vTheta * delta; 
+        
+        // 3. Vertical Downdraft
+        positions[i*3+1] -= 9.0 * speedMult * delta; 
+        
+        // Reset Logic (Cycle particles back to top intake)
+        if (positions[i*3+1] < -4.9 || r <= 0.1) {
+          positions[i*3+1] = 18 + (Math.random() * 5); // Start high above intake cowl
+          r = Math.random() * 10 + 2; // Reset radius outward
+          pAngles[i] = Math.random() * Math.PI * 2;
+        }
+
+        pRadii[i] = r;
+        positions[i*3] = Math.cos(pAngles[i]) * r;
+        positions[i*3+2] = Math.sin(pAngles[i]) * r;
+      }
+      vortexParticles.geometry.attributes.position.needsUpdate = true;
+
+      // Animate Water ripples (Downdraft pressure simulation)
+      for (let i = 0; i < posAttr.count; i++) {
+        const x = waterBase[i].x; const y = waterBase[i].y;
+        const dist = Math.sqrt(x*x + y*y);
+        // Concentric waves emanating from center, strongest directly under core
+        const z = Math.sin(dist * 2.2 - time * 6.5) * 0.45 * Math.max(0, (18 - dist)/18);
+        posAttr.setZ(i, z);
+      }
+      posAttr.needsUpdate = true;
+      waterGeo.computeVertexNormals(); // Update normals for dynamic lighting on wavy surface
+
+      // Update SVG Connector Line Layout
+      if (hoveredObj) {
+        // Special mapping for hitboxes to point to actual visual geometry
+        let targetMesh = hoveredObj;
+        if (hoveredObj === plateHitbox) targetMesh = plates;
+        if (hoveredObj === pipeHitbox) targetMesh = vortexPipes;
+        
+        const screenPos = toScreenPosition(targetMesh, camera);
+        const panelRect = panel.getBoundingClientRect();
+        
+        // Ensure standard screen coordinates handle pixel density
+        svgConnector.setAttribute('x1', screenPos.x);
+        svgConnector.setAttribute('y1', screenPos.y);
+        svgConnector.setAttribute('x2', panelRect.left - 5);
+        svgConnector.setAttribute('y2', panelRect.top + 28); // Point near title
+      }
+
+      // Render via Composer (Bloom required)
+      composer.render();
+    }
+
+    // ==========================================
+    // 7. RESIZE & THEME LOGIC
+    // ==========================================
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      composer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    const themes = ['dark', 'light'];
+    let tIndex = 0;
+    const tBtn = document.getElementById('theme-toggle');
+    tBtn.addEventListener('click', () => {
+      tIndex = (tIndex + 1) % themes.length;
+      document.documentElement.setAttribute('data-theme', themes[tIndex]);
+      tBtn.innerText = `Theme: ${themes[tIndex].charAt(0).toUpperCase() + themes[tIndex].slice(1)}`;
+      // Match scene fog to theme background color
+      scene.fog.color.setHex(themes[tIndex] === 'light' ? 0xfafafa : 0x0a0a0a);
+    });
+
+    // Initialize Simulation
+    animate();
+  </script>
+</body>
+</html>

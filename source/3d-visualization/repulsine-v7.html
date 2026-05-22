@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Repulsine Implosion Dynamics | Advanced Telemetry</title>
+  
+  <style>
+    /* =========================================
+       DESIGN FOUNDATIONS & TYPOGRAPHY (v6 Restored)
+       ========================================= */
+    :root {
+      --font-body: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      --accent: #0f766e; 
+      --accent-glow: rgba(15, 118, 110, 0.15);
+      
+      /* Dark Mode */
+      --bg-color: #0a0a0a;
+      --surface-color: rgba(23, 23, 23, 0.85);
+      --text-main: #f5f5f5;
+      --text-muted: #a3a3a3;
+      --border-color: rgba(64, 64, 64, 0.8);
+      --backdrop-blur: blur(12px);
+    }
+
+    [data-theme="light"] {
+      --bg-color: #fafafa;
+      --surface-color: rgba(255, 255, 255, 0.85);
+      --text-main: #171717;
+      --text-muted: #525252;
+      --border-color: rgba(229, 229, 229, 0.8);
+    }
+
+    body {
+      margin: 0; overflow: hidden;
+      background-color: var(--bg-color); color: var(--text-main);
+      font-family: var(--font-body); -webkit-font-smoothing: antialiased;
+    }
+
+    #webgl-container, #svg-layer {
+      position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
+    }
+    #webgl-container { z-index: 1; }
+    #svg-layer { z-index: 2; pointer-events: none; }
+
+    /* UI Overlay Restored from v2/v6 */
+    #ui-layer {
+      position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
+      z-index: 10; pointer-events: none; padding: 24px; box-sizing: border-box;
+      display: flex; flex-direction: column; justify-content: space-between;
+    }
+
+    /* Header */
+    #header { pointer-events: auto; display: flex; align-items: center; gap: 12px; }
+    h1 { margin: 0; font-size: 16px; font-weight: 600; letter-spacing: 0.5px; }
+    .status-badge {
+      background: rgba(15, 118, 110, 0.2); color: var(--accent); border: 1px solid var(--accent);
+      padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; text-transform: uppercase;
+    }
+
+    /* Controls Panel */
+    .controls {
+      position: absolute; top: 24px; right: 24px; display: flex; gap: 8px; pointer-events: auto;
+    }
+    button {
+      background: var(--surface-color); border: 1px solid var(--border-color);
+      color: var(--text-main); padding: 8px 16px; border-radius: 4px;
+      cursor: pointer; font-family: var(--font-body); font-size: 12px; font-weight: 500;
+      backdrop-filter: var(--backdrop-blur); transition: all 0.2s ease;
+    }
+    button:hover, button.active { background: var(--border-color); }
+    button.active { border-color: var(--accent); color: var(--accent); }
+
+    /* Telemetry Panel */
+    .telemetry-panel {
+      position: absolute; background: var(--surface-color); backdrop-filter: var(--backdrop-blur);
+      border: 1px solid var(--border-color); padding: 16px 20px; border-radius: 8px;
+      pointer-events: auto; width: 280px; display: none; opacity: 0; transition: opacity 0.3s ease;
+    }
+    .telemetry-panel h2 { margin: 0 0 8px 0; font-size: 14px; font-weight: 700; text-transform: uppercase; }
+    .telemetry-panel p { margin: 0; font-size: 13px; color: var(--text-muted); line-height: 1.5; }
+    .kpi-container { display: flex; gap: 24px; margin-top: 16px; border-top: 1px solid var(--border-color); padding-top: 16px; }
+    .kpi { display: flex; flex-direction: column; }
+    .kpi-val { font-size: 22px; font-weight: 700; color: var(--accent); font-variant-numeric: tabular-nums lining-nums; }
+    .kpi-lbl { font-size: 11px; text-transform: uppercase; color: var(--text-muted); margin-top: 4px; }
+
+    /* Loading Overlay */
+    #overlay {
+      position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
+      background: var(--bg-color); z-index: 9999; display: flex; flex-direction: column;
+      justify-content: center; align-items: center; transition: opacity 0.5s ease;
+    }
+    .spinner {
+      width: 40px; height: 40px; border: 3px solid var(--border-color);
+      border-top-color: var(--accent); border-radius: 50%; animation: spin 1s linear infinite;
+    }
+    @keyframes spin { 100% { transform: rotate(360deg); } }
+  </style>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+</head>
+<body>
+
+  <div id="overlay">
+    <div class="spinner"></div>
+    <p style="margin-top: 16px; font-size: 14px; letter-spacing: 1px;">INITIALIZING REPULSINE PHYSICS...</p>
+  </div>
+
+  <div id="webgl-container"></div>
+  
+  <svg id="svg-layer">
+    <line id="svg-connector" x1="0" y1="0" x2="0" y2="0" stroke="var(--accent)" stroke-width="1.5" stroke-dasharray="4 4" opacity="0"></line>
+  </svg>
+
+  <div id="ui-layer">
+    <div id="header">
+      <h1>Schauberger Repulsine</h1>
+      <span class="status-badge">Live Telemetry</span>
+    </div>
+
+    <div class="controls">
+      <button id="theme-toggle">Theme: Dark</button>
+      <button id="rotate-toggle" class="active">Auto-Rotate</button>
+      <button id="explode-toggle">Exploded View</button>
+    </div>
+    
+    <div class="telemetry-panel" id="info-panel" style="top: 25%; left: 80px;">
+      <h2 id="panel-title">Component</h2>
+      <p id="panel-desc">Description</p>
+      <div class="kpi-container">
+        <div class="kpi">
+          <span class="kpi-val" id="panel-val-1">0.0</span>
+          <span class="kpi-lbl" id="panel-lbl-1">Metric 1</span>
+        </div>
+        <div class="kpi">
+          <span class="kpi-val" id="panel-val-2">0.0</span>
+          <span class="kpi-lbl" id="panel-lbl-2">Metric 2</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ==========================================
+    // 1. SCENE SETUP (Optimized)
+    // ==========================================
+    const container = document.getElementById('webgl-container');
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.FogExp2(0x0a0a0a, 0.015);
+
+    const camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.set(0, 15, 35);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "high-performance" });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    container.appendChild(renderer.domElement);
+
+    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true; controls.dampingFactor = 0.05;
+    controls.maxPolarAngle = Math.PI / 2 - 0.05;
+
+    // State Variables
+    let isExploded = false;
+    let autoRotate = true;
+
+    // ==========================================
+    // 2. ENVIRONMENT (CPU Optimized Shader Water + BG)
+    // ==========================================
+    // Metal Bunker (Added panel edges/background effect via geometry to avoid regressions)
+    const roomGeo = new THREE.BoxGeometry(150, 80, 150);
+    const roomMat = new THREE.MeshStandardMaterial({ color: 0x1a1d20, roughness: 0.7, metalness: 0.9, side: THREE.BackSide });
+    const room = new THREE.Mesh(roomGeo, roomMat);
+    room.position.y = 30; 
+    room.receiveShadow = true;
+    scene.add(room);
+
+    // Structural floor grid maintained for scale
+    const gridHelper = new THREE.GridHelper(150, 60, 0x0f766e, 0x222222);
+    gridHelper.position.y = -4.95;
+    gridHelper.material.opacity = 0.2;
+    gridHelper.material.transparent = true;
+    scene.add(gridHelper);
+
+    // GPU-Accelerated Water maintained
+    const waterGeo = new THREE.PlaneGeometry(40, 40, 64, 64);
+    const waterUniforms = {
+        time: { value: 0 },
+        color: { value: new THREE.Color(0x050505) }
+    };
+    const waterMat = new THREE.ShaderMaterial({
+        uniforms: waterUniforms,
+        vertexShader: `
+            uniform float time;
+            varying vec2 vUv;
+            void main() {
+                vUv = uv;
+                vec3 pos = position;
+                float dist = length(pos.xy);
+                // Calculate ripple displacement entirely on GPU
+                pos.z += sin(dist * 2.5 - time * 6.0) * 0.4 * max(0.0, (15.0 - dist)/15.0);
+                gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
+            }
+        `,
+        fragmentShader: `
+            uniform vec3 color;
+            void main() { gl_FragColor = vec4(color, 0.85); }
+        `,
+        transparent: true
+    });
+    const waterPanel = new THREE.Mesh(waterGeo, waterMat);
+    waterPanel.rotation.x = -Math.PI / 2;
+    waterPanel.position.y = -4.9;
+    scene.add(waterPanel);
+
+    // Lighting (Restored v2 config)
+    scene.add(new THREE.AmbientLight(0xffffff, 0.3));
+    const mainSpot = new THREE.SpotLight(0xffffff, 2.0, 120, Math.PI/4, 0.5, 1);
+    mainSpot.position.set(0, 35, 0); mainSpot.castShadow = true;
+    scene.add(mainSpot);
+    
+    const accentLight = new THREE.PointLight(0x0f766e, 1.0, 50);
+    accentLight.position.set(-15, 10, -15); scene.add(accentLight);
+
+    // ==========================================
+    // 3. REPULSINE GEOMETRY
+    // ==========================================
+    const craftGroup = new THREE.Group();
+    craftGroup.position.y = 5;
+    scene.add(craftGroup);
+
+    const hullMat = new THREE.MeshStandardMaterial({ color: 0x999999, metalness: 0.6, roughness: 0.35 });
+    const copperMat = new THREE.MeshStandardMaterial({ color: 0xc27c4a, metalness: 0.95, roughness: 0.3 });
+    const highlightMat = new THREE.MeshStandardMaterial({ color: 0x0f766e, metalness: 0.8, roughness: 0.1, emissive: 0x0f766e, emissiveIntensity: 0.5 });
+    
+    // Intake Cowl restored
+    const intakeRing = new THREE.Mesh(new THREE.TorusGeometry(1.8, 0.3, 16, 64), copperMat);
+    intakeRing.rotation.x = Math.PI / 2;
+    intakeRing.userData = { baseY: 3.6, expY: 7.0, name: "Intake Cowl", desc: "Draws ambient air into chamber.", v1: "1.2 atm", l1: "Intake Prs", v2: "14 m/s", l2: "Flow" };
+    craftGroup.add(intakeRing);
+
+    // Suction Core maintained
+    const coreMat = new THREE.MeshStandardMaterial({ color: 0x00ffff, emissive: 0x00aaff, emissiveIntensity: 0.8 });
+    const core = new THREE.Mesh(new THREE.SphereGeometry(1.0, 32, 32), coreMat);
+    core.userData = { baseY: 0, expY: 3.5, name: "Suction Core", desc: "Primary cycloidal implosion zone.", v1: "-18 °C", l1: "Core Temp", v2: "0.15 atm", l2: "Pressure" };
+    craftGroup.add(core);
+
+    // Lathe Shell maintained
+    const hullPts = [new THREE.Vector2(0,-1.8), new THREE.Vector2(3,-1.8), new THREE.Vector2(8,0), new THREE.Vector2(8,0.5), new THREE.Vector2(1.8,2.8), new THREE.Vector2(0,2.8)];
+    const shell = new THREE.Mesh(new THREE.LatheGeometry(hullPts, 64), hullMat);
+    shell.castShadow = true;
+    shell.userData = { baseY: 0, expY: 0, name: "Coanda Hull", desc: "Maintains laminar low-pressure lift.", v1: "12k", l1: "RPM", v2: "1.4 kg", l2: "Load" };
+    craftGroup.add(shell);
+
+    // Corrugated Plates procedural fix maintained
+    const plateGroup = new THREE.Group();
+    plateGroup.userData = { baseY: 0.7, expY: -3.0 };
+    const basePlateGeo = new THREE.CylinderGeometry(5.5, 5.5, 0.05, 128, 1);
+    const pV = basePlateGeo.attributes.position;
+    for(let i=0; i<pV.count; i++) {
+        const x = pV.getX(i), z = pV.getZ(i);
+        // Proc wavy definition maintained
+        pV.setY(i, pV.getY(i) + Math.sin(Math.atan2(z, x) * 24) * 0.2 * (Math.sqrt(x*x+z*z)/5.5));
+    }
+    basePlateGeo.computeVertexNormals();
+    for(let j=0; j<3; j++) {
+        const p = new THREE.Mesh(basePlateGeo, copperMat);
+        p.position.y = j * 0.45; plateGroup.add(p);
+    }
+    craftGroup.add(plateGroup);
+
+    const plateHitbox = new THREE.Mesh(new THREE.CylinderGeometry(5.8, 5.8, 1.6, 32), new THREE.MeshBasicMaterial({visible: false}));
+    plateHitbox.userData = { baseY: 1.2, expY: -2.5, name: "Corrugated Turbine", desc: "Mimics trout-gill dynamics to induce spiraling 'living' air flow.", v1: "Copper", l1: "Mat", v2: "Cycloidal", l2: "Flow" };
+    craftGroup.add(plateHitbox);
+
+    // modeling FIX: Whorl Pipes / Tangential Vortex Spigots (Changed from generic toruses to helical knots sitting flat on main disc plate as seen in reference images)
+    const pipeGroup = new THREE.Group();
+    pipeGroup.userData = { baseY: 2.4, expY: -6.0 };
+    
+    // Geometry definition changed to use TorusKnot to simulate individual coiled tubes wrapped into a ring, sitting flat horizontally
+    const spigotGeo = new THREE.TorusKnotGeometry(0.8, 0.12, 100, 16, 1, 15);
+    for (let i = 0; i < 8; i++) {
+      const a = (i/8) * Math.PI * 2;
+      const spigot = new THREE.Mesh(spigotGeo, copperMat);
+      // Positioned tangentially around core on top of main disc
+      spigot.position.set(Math.cos(a)*3.2, 0, Math.sin(a)*3.2);
+      // Rotated so "Sonic ring" appearance is gone, instead lies flat
+      spigot.rotation.set(Math.PI/2, 0, 0);
+      pipeGroup.add(spigot);
+    }
+    craftGroup.add(pipeGroup);
+
+    const pipeHitbox = new THREE.Mesh(new THREE.TorusGeometry(3.2, 1.2, 16, 32), new THREE.MeshBasicMaterial({visible: false}));
+    pipeHitbox.userData = { baseY: 2.4, expY: -6.0, name: "Vortex Spigots", desc: "Guides mixture into centripetal spiral path to generate implosion vacuum.", v1: "8", l1: "Nozzles", v2: "Tangential", l2: "Vector" };
+    craftGroup.add(pipeHitbox);
+
+    // ==========================================
+    // 4. LOW-CPU VISUALIZATION: Air Streaks (LineSegments)
+    // ==========================================
+    const streakCount = 1000; // Drastically reduced total elements for CPU savings
+    const streakSegments = 8; // Vertices per streak (smooth curve)
+    
+    // Arrays for tracking streak state on CPU
+    const sRadii = new Float32Array(streakCount);
+    const sAngles = new Float32Array(streakCount);
+    const sSpeeds = new Float32Array(streakCount);
+    
+    // BufferGeometry for lines
+    const streakGeo = new THREE.BufferGeometry();
+    const streakPos = new Float32Array(streakCount * streakSegments * 3);
+    const streakCol = new Float32Array(streakCount * streakSegments * 4); // RGBA per vertex for fade
+    
+    const baseColor = new THREE.Color(0x00ffff);
+
+    // Initialize streak states
+    for (let i = 0; i < streakCount; i++) {
+      sAngles[i] = Math.random() * Math.PI * 2;
+      sRadii[i] = Math.random() * 10 + 1; // Initial radial spread
+      sSpeeds[i] = Math.random() * 0.6 + 0.4; // Individual variation
+      
+      const baseX = Math.cos(sAngles[i]) * sRadii[i];
+      const baseY = (Math.random() * 25) - 5; 
+      const baseZ = Math.sin(sAngles[i]) * sRadii[i];
+
+      // Initialize segment positions and colors (fading tail)
+      for (let s = 0; s < streakSegments; s++) {
+          streakPos[(i * streakSegments + s) * 3]     = baseX;
+          streakPos[(i * streakSegments + s) * 3 + 1] = baseY;
+          streakPos[(i * streakSegments + s) * 3 + 2] = baseZ;
+          
+          // Color fade from head (0) to tail (segments)
+          const alpha = 0.5 * (1.0 - s/streakSegments);
+          streakCol[(i * streakSegments + s) * 4]     = baseColor.r;
+          streakCol[(i * streakSegments + s) * 4 + 1] = baseColor.g;
+          streakCol[(i * streakSegments + s) * 4 + 2] = baseColor.b;
+          streakCol[(i * streakSegments + s) * 4 + 3] = alpha;
+      }
+    }
+    
+    streakGeo.setAttribute('position', new THREE.BufferAttribute(streakPos, 3));
+    streakGeo.setAttribute('color', new THREE.BufferAttribute(streakCol, 4));
+    
+    // Material configured for line fading/additive blending
+    const streakMat = new THREE.LineBasicMaterial({
+        vertexColors: true,
+        blending: THREE.AdditiveBlending,
+        transparent: true,
+        linewidth: 1 // Linewidth support varies by browser/OS
+    });
+    
+    // Visualization changed from Points to LineSegments for "streak" effect and lower CPU cost (fewer objects rendered)
+    const visualization = new THREE.LineSegments(streakGeo, streakMat);
+    scene.add(visualization);
+
+    // ==========================================
+    // 5. INTERACTION & UI
+    // ==========================================
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+    let hoveredObj = null, originalMat = null;
+    const panel = document.getElementById('info-panel');
+    const svgConnector = document.getElementById('svg-connector');
+    
+    // Interactables list restored
+    const interactables = [intakeRing, core, shell, plateHitbox, pipeHitbox];
+
+    function toScreenPosition(obj, camera) {
+      const vector = new THREE.Vector3();
+      obj.getWorldPosition(vector);
+      vector.project(camera);
+      return { x: (vector.x * .5 + .5) * window.innerWidth, y: (vector.y * -.5 + .5) * window.innerHeight };
+    }
+
+    window.addEventListener('mousemove', (e) => {
+      mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+      mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+      raycaster.setFromCamera(mouse, camera);
+      const intersects = raycaster.intersectObjects(interactables);
+
+      if (intersects.length > 0) {
+        const obj = intersects[0].object;
+        if (hoveredObj !== obj) {
+          // Reset highlights
+          if (hoveredObj) {
+              if (hoveredObj === plateHitbox) plateGroup.children.forEach(c => c.material = originalMat);
+              else if (hoveredObj === pipeHitbox) pipeGroup.children.forEach(c => c.material = originalMat);
+              else hoveredObj.material = originalMat;
+          }
+          hoveredObj = obj;
+          // Apply Teal Highlight Mat
+          if (obj === plateHitbox) { originalMat = plateGroup.children[0].material; plateGroup.children.forEach(c => c.material = highlightMat); }
+          else if (obj === pipeHitbox) { originalMat = pipeGroup.children[0].material; pipeGroup.children.forEach(c => c.material = highlightMat); }
+          else { originalMat = obj.material; obj.material = highlightMat; }
+
+          // Populate UI Panel
+          document.getElementById('panel-title').innerText = obj.userData.name;
+          document.getElementById('panel-desc').innerText = obj.userData.desc;
+          document.getElementById('panel-val-1').innerText = obj.userData.v1;
+          document.getElementById('panel-lbl-1').innerText = obj.userData.l1;
+          document.getElementById('panel-val-2').innerText = obj.userData.v2;
+          document.getElementById('panel-lbl-2').innerText = obj.userData.l2;
+          
+          panel.style.display = 'block';
+          void panel.offsetWidth; // Force reflow
+          panel.style.opacity = '1';
+          svgConnector.setAttribute('opacity', '1');
+        }
+      } else {
+        if (hoveredObj) {
+          if (hoveredObj === plateHitbox) plateGroup.children.forEach(c => c.material = originalMat);
+          else if (hoveredObj === pipeHitbox) pipeGroup.children.forEach(c => c.material = originalMat);
+          else hoveredObj.material = originalMat;
+          hoveredObj = null;
+          panel.style.opacity = '0'; svgConnector.setAttribute('opacity', '0');
+          setTimeout(() => { if(!hoveredObj) panel.style.display = 'none'; }, 300);
+        }
+      }
+    });
+
+    // ==========================================
+    // 6. TOGGLES & LIFECYCLE maintained
+    // ==========================================
+    document.getElementById('explode-toggle').addEventListener('click', function() {
+        isExploded = !isExploded;
+        this.classList.toggle('active');
+    });
+
+    document.getElementById('rotate-toggle').addEventListener('click', function() {
+        autoRotate = !autoRotate;
+        this.classList.toggle('active');
+    });
+
+    const themes = ['dark', 'light']; let tIndex = 0;
+    const tBtn = document.getElementById('theme-toggle');
+    tBtn.addEventListener('click', () => {
+      tIndex = (tIndex + 1) % themes.length;
+      document.documentElement.setAttribute('data-theme', themes[tIndex]);
+      tBtn.innerText = `Theme: ${themes[tIndex].charAt(0).toUpperCase() + themes[tIndex].slice(1)}`;
+      // Fog matched to theme background maintained
+      scene.fog.color.setHex(themes[tIndex] === 'light' ? 0xfafafa : 0x0a0a0a);
+    });
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    const clock = new THREE.Clock();
+
+    function animate() {
+      requestAnimationFrame(animate);
+      const delta = clock.getDelta(); const time = clock.getElapsedTime();
+      controls.update();
+
+      // UI Exploded View Lerping maintained
+      [intakeRing, core, shell, plateGroup, plateHitbox, pipeGroup, pipeHitbox].forEach(child => {
+         const target = isExploded ? child.userData.expY : child.userData.baseY;
+         child.position.y += (target - child.position.y) * 0.1;
+      });
+
+      // Rotation maintained
+      if (autoRotate) craftGroup.rotation.y += 0.5 * delta;
+      shell.rotation.y -= 1.0 * delta;
+      plateGroup.rotation.y -= 2.5 * delta;
+
+      // PHYSICS VISUALIZATION UPDATED: Air Streaks (Optimized for low CPU)
+      const positions = streakGeo.attributes.position.array;
+      for (let i = 0; i < streakCount; i++) {
+        const speedMult = sSpeeds[i] * delta;
+        const currentIdx = i * streakSegments;
+        
+        // --- 1. Advance the Streak Head (Vertex 0) ---
+        let r = sRadii[i];
+        
+        // Centripetal Pull (Pull inward faster as radius decreases - accurate implosion)
+        if (r > 0.1) r -= (2.5 + (1.0/r)) * speedMult; 
+        
+        // Cycloidal Spin (Conservation of angular momentum - spins exponentially faster as radius decreases)
+        let vTheta = (3.5 / (r + 0.1)); 
+        sAngles[i] += vTheta * speedMult; 
+        
+        // Current head vertical position
+        let headY = positions[currentIdx * 3 + 1];
+        // Vertical Downdraft maintained
+        headY -= 9.0 * speedMult; 
+        
+        // Reset Logic (Cycle streaks back to top intake) maintained for visual consistency
+        if (headY < -4.9 || r <= 0.1) {
+          headY = 15 + Math.random()*5; // Reset high above intake cowl
+          r = Math.random() * 8 + 2; // Reset radius outward
+          sAngles[i] = Math.random() * Math.PI * 2;
+        }
+        
+        sRadii[i] = r;
+        
+        // Calculate new head position
+        const newX = Math.cos(sAngles[i]) * r;
+        const newZ = Math.sin(sAngles[i]) * r;
+        
+        // --- 2. Update all Segment Vertices to look like a streak ---
+        // Propagate positions backward through the streak (farthest tail takes prev segment pos)
+        for (let s = streakSegments - 1; s > 0; s--) {
+            const currentSegIdx = (currentIdx + s) * 3;
+            const prevSegIdx = (currentIdx + s - 1) * 3;
+            positions[currentSegIdx]     = positions[prevSegIdx];
+            positions[currentSegIdx + 1] = positions[prevSegIdx + 1];
+            positions[currentSegIdx + 2] = positions[prevSegIdx + 2];
+        }
+        
+        // Update vertex 0 (head) with calculated physics position
+        positions[currentIdx * 3]     = newX;
+        positions[currentIdx * 3 + 1] = headY;
+        positions[currentIdx * 3 + 2] = newZ;
+      }
+      // Single buffer update call for high performance
+      streakGeo.attributes.position.needsUpdate = true;
+
+      // Update GPU Water Time maintained
+      waterUniforms.time.value = time;
+
+      // Update SVG Line Layout maintained
+      if (hoveredObj) {
+        let target = hoveredObj;
+        // Hitbox mapping to parents restored
+        if(hoveredObj === plateHitbox) target = plateGroup.children[1];
+        if(hoveredObj === pipeHitbox) target = pipeGroup.children[0];
+        
+        const screenPos = toScreenPosition(target, camera);
+        const panelRect = panel.getBoundingClientRect();
+        // Dynamic alignment from screen pos to panel corner maintained
+        svgConnector.setAttribute('x1', screenPos.x);
+        svgConnector.setAttribute('y1', screenPos.y);
+        svgConnector.setAttribute('x2', panelRect.left - 5);
+        svgConnector.setAttribute('y2', panelRect.top + 24);
+      }
+
+      renderer.render(scene, camera);
+    }
+
+    // Mount Application cleanly maintained
+    window.onload = () => {
+      setTimeout(() => {
+        const overlay = document.getElementById('overlay');
+        overlay.style.opacity = '0';
+        setTimeout(() => overlay.style.display = 'none', 500);
+      }, 800);
+      animate();
+    };
+  </script>
+</body>
+</html>
