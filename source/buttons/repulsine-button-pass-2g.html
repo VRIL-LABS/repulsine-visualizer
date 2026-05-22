@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Repulsine Button Pass 2G</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-a:#f5f8fb; --bg-b:#ebf0f5; --bg-c:#dde6ee;
+      --panel-a:#eef3f7; --panel-b:#dfe7ee;
+      --text:#33414e;
+      --teal:rgba(57,223,200,0.96);
+      --gold:rgba(255,194,92,0.96);
+      --violet:rgba(176,140,255,0.62);
+    }
+    *{box-sizing:border-box;}
+    html,body{height:100%;}
+    body{
+      margin:0;font-family:Inter,system-ui,sans-serif;color:var(--text);
+      background:
+        radial-gradient(circle at 14% 0%,rgba(255,255,255,0.78),transparent 34%),
+        radial-gradient(circle at 84% 100%,rgba(255,255,255,0.58),transparent 30%),
+        linear-gradient(160deg,var(--bg-a) 0%,var(--bg-b) 46%,var(--bg-c) 100%);
+      display:grid;place-items:center;overflow:hidden;
+    }
+    .stage{width:min(94vw,1220px);min-height:860px;padding:40px;display:grid;place-items:center;}
+    .panel{
+      position:relative;width:min(940px,92vw);min-height:740px;border-radius:42px;
+      background:linear-gradient(145deg,var(--panel-a),var(--panel-b));
+      box-shadow:
+        34px 34px 70px rgba(164,180,196,0.42),
+        -28px -28px 64px rgba(255,255,255,0.98),
+        inset 1px 1px 0 rgba(255,255,255,0.78),
+        inset -1px -1px 0 rgba(171,186,201,0.16);
+      display:grid;place-items:center;padding:88px 30px 98px;
+      overflow:visible;isolation:isolate;
+    }
+    .panel::before{
+      content:"";position:absolute;inset:24px;border-radius:34px;
+      background:linear-gradient(145deg,rgba(255,255,255,0.26),rgba(255,255,255,0.05));
+      box-shadow:inset 18px 18px 32px rgba(174,188,201,0.18),inset -16px -16px 28px rgba(255,255,255,0.44);
+      pointer-events:none;
+    }
+    .panel-tag,.panel-note{
+      position:absolute;z-index:10;text-transform:uppercase;
+      letter-spacing:0.2em;color:rgba(88,103,118,0.64);
+    }
+    .panel-tag{top:32px;left:36px;font-size:12px;}
+    .panel-note{right:38px;bottom:34px;font-size:11px;color:rgba(95,110,125,0.58);}
+
+    /* ── SCENE ── */
+    .scene{
+      position:relative;width:min(100%,780px);height:600px;
+      display:grid;place-items:center;
+      perspective:1750px;overflow:visible;z-index:2;
+    }
+    .underlay{position:absolute;inset:0;pointer-events:none;overflow:visible;}
+
+    /* ── SHARED ABSOLUTE-CENTERED UTIL ── */
+    .well,.aura,.force-ring,.field-shell,.bio-halo,.shadow-umbra{
+      position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);pointer-events:none;
+    }
+
+    .well{
+      width:430px;height:430px;border-radius:50%;
+      background:linear-gradient(145deg,#dce5ec,#eef3f8);
+      box-shadow:
+        inset 30px 30px 42px rgba(172,186,200,0.58),
+        inset -24px -24px 40px rgba(255,255,255,0.97),
+        0 0 0 1px rgba(255,255,255,0.42);
+    }
+    .well::before{
+      content:"";position:absolute;inset:28px;border-radius:50%;
+      background:radial-gradient(circle at 50% 54%,rgba(57,223,200,0.08) 0 20%,transparent 52%),
+                 radial-gradient(circle at 50% 58%,rgba(255,255,255,0.10) 0 12%,rgba(255,255,255,0) 42%);
+      box-shadow:inset 0 0 18px rgba(255,255,255,0.82),0 0 10px rgba(255,255,255,0.26);
+      transition:box-shadow 520ms ease,background 520ms ease;
+    }
+    .scene[data-state="hover"] .well::before,
+    .scene[data-state="charge"] .well::before{
+      background:radial-gradient(circle at 50% 54%,rgba(57,223,200,0.14) 0 22%,transparent 52%),
+                 radial-gradient(circle at 50% 58%,rgba(255,255,255,0.82) 0 10%,rgba(255,255,255,0) 46%);
+      box-shadow:inset 0 0 52px rgba(255,255,255,0.84),0 0 24px rgba(255,255,255,0.34);
+    }
+
+    .aura{
+      width:760px;height:760px;border-radius:50%;opacity:0;
+      background:
+        radial-gradient(circle at 50% 53%,rgba(255,255,255,0.9) 0 10%,rgba(255,255,255,0.28) 16%,rgba(255,255,255,0) 42%),
+        radial-gradient(circle at 50% 52%,rgba(57,223,200,0.13) 0 18%,transparent 38%),
+        radial-gradient(circle at 50% 52%,rgba(255,194,92,0.08) 0 8%,transparent 20%);
+      filter:blur(18px);
+      transform:translate(-50%,-50%) scale(0.92);
+      transition:opacity 520ms ease,transform 520ms cubic-bezier(.16,1,.3,1);
+    }
+    .scene[data-state="hover"] .aura,
+    .scene[data-state="charge"] .aura{opacity:0.92;transform:translate(-50%,-50%) scale(1);}
+
+    /* progressive scale driven by JS .style.transform */
+    .field-shell{
+      width:420px;height:232px;border-radius:50%;
+      background:
+        radial-gradient(circle at 50% 50%,rgba(255,255,255,0.34) 0 32%,rgba(255,255,255,0.10) 44%,rgba(255,255,255,0.02) 60%,transparent 76%),
+        radial-gradient(circle at 50% 52%,rgba(57,223,200,0.24) 0 26%,rgba(57,223,200,0.08) 46%,transparent 72%),
+        radial-gradient(circle at 50% 52%,rgba(255,194,92,0.08) 0 14%,transparent 38%);
+      box-shadow:0 0 22px rgba(255,255,255,0.24),0 0 38px rgba(57,223,200,0.14);
+      opacity:0;transform:translate(-50%,-50%) scale(0.28) translateY(-8px);
+    }
+
+    .force-ring{
+      width:338px;height:338px;border-radius:50%;opacity:0;
+      background:radial-gradient(circle,transparent 57%,rgba(255,255,255,0.84) 63%,rgba(255,255,255,0.16) 68%,transparent 73%);
+      transform:translate(-50%,-50%) translateY(16px) scale(0.96);
+      transition:transform 620ms cubic-bezier(.16,1,.3,1),opacity 520ms ease;
+    }
+    .scene[data-state="hover"] .force-ring{opacity:0.84;transform:translate(-50%,-50%) translateY(20px) scale(1);}
+    /* force-ring in charge is driven by JS */
+
+    .bio-halo{
+      width:392px;height:392px;border-radius:50%;opacity:0;
+      background:conic-gradient(from 16deg,
+        rgba(57,223,200,0) 0deg 18deg,  rgba(57,223,200,0.18) 22deg 30deg,
+        rgba(255,255,255,0) 34deg 78deg, rgba(255,194,92,0.18) 82deg 90deg,
+        rgba(255,255,255,0) 94deg 154deg,rgba(176,140,255,0.14) 160deg 166deg,
+        rgba(255,255,255,0) 172deg 236deg,rgba(57,223,200,0.18) 240deg 248deg,
+        rgba(255,255,255,0) 252deg 360deg);
+      -webkit-mask:radial-gradient(circle,transparent 60%,black 67%,transparent 74%);
+      mask:radial-gradient(circle,transparent 60%,black 67%,transparent 74%);
+      filter:blur(3px);transform:translate(-50%,-50%) scale(0.94);
+    }
+
+    .shadow-umbra{
+      width:286px;height:106px;border-radius:50%;opacity:0.28;
+      background:radial-gradient(circle at 50% 50%,rgba(117,131,144,0.42) 0,rgba(117,131,144,0.18) 42%,rgba(117,131,144,0) 76%);
+      filter:blur(12px);transform:translate(-50%,-50%) translateY(156px) scale(1);
+      transition:transform 620ms cubic-bezier(.16,1,.3,1),opacity 520ms ease,filter 620ms ease;
+    }
+    .scene[data-state="hover"] .shadow-umbra{
+      opacity:0.52;transform:translate(-50%,-50%) translateY(180px) scale(1.08);filter:blur(14px);
+    }
+
+    /* ── TILT CHAIN ── */
+    .tilt-stage,.tilt-body,.saucer-button{transform-style:preserve-3d;}
+    .tilt-stage{position:relative;width:520px;height:380px;display:grid;place-items:center;z-index:5;}
+    .tilt-body{
+      position:relative;width:520px;height:380px;display:grid;place-items:center;
+      transform:rotateX(0deg) rotateY(0deg);
+      transition:transform 120ms linear;will-change:transform;
+    }
+    .saucer-button{
+      position:relative;width:410px;height:240px; pointer-events:none;border:0;background:none;padding:0;
+      cursor:pointer;transform:translateY(0px);
+      transition:transform 800ms cubic-bezier(.16,1,.3,1);overflow:visible;
+    }
+    .scene[data-state="hover"] .saucer-button{transform:translateY(-16px);}
+
+    /* ── SAUCER LAYERS ── */
+    .s-underside,.s-main,.s-belly,.s-rim,
+    .s-ring-a,.s-ring-b,.s-seams,.s-apertures,
+    .s-veins,.s-core,.s-shine,.s-bursts,.engage-svg{
+      position:absolute;pointer-events:none;
+    }
+
+    /* UNDERSIDE — propulsion, Thule vortex dynamo, revealed on back-tilt */
+    .s-underside{
+      left:80px;right:80px;bottom:28px;height:82px;border-radius:50%;
+      background:
+        radial-gradient(circle at 50% 64%,rgba(57,223,200,0.82) 0 6%,rgba(57,223,200,0.36) 14%,rgba(57,223,200,0.06) 28%,transparent 44%),
+        conic-gradient(from 0deg,
+          transparent 0deg 18deg, rgba(57,223,200,0.48) 24deg 30deg,
+          transparent 36deg 78deg, rgba(255,194,92,0.42) 84deg 90deg,
+          transparent 96deg 138deg,rgba(57,223,200,0.44) 144deg 150deg,
+          transparent 156deg 198deg,rgba(255,255,255,0.36) 204deg 210deg,
+          transparent 216deg 258deg,rgba(255,194,92,0.38) 264deg 270deg,
+          transparent 276deg 318deg,rgba(57,223,200,0.36) 324deg 330deg,
+          transparent 336deg 360deg),
+        radial-gradient(circle at 50% 64%,rgba(6,8,12,0.62) 0 8%,rgba(6,8,12,0.48) 14%,rgba(6,8,12,0.16) 28%,transparent 48%);
+      -webkit-mask:radial-gradient(ellipse at 50% 50%,black 48%,transparent 52%);
+      mask:radial-gradient(ellipse at 50% 50%,black 48%,transparent 52%);
+      transform:translateZ(-12px) scaleY(0.72);
+      opacity:0;
+      box-shadow:0 0 14px rgba(57,223,200,0.42),0 0 28px rgba(57,223,200,0.18);
+      transition:opacity 260ms ease;
+    }
+    /* revealed when craft tilts back */
+    .scene[data-back="1"] .s-underside{opacity:0.9;}
+    .scene[data-state="charge"][data-back="1"] .s-underside{opacity:1;box-shadow:0 0 28px rgba(57,223,200,0.62),0 0 48px rgba(255,194,92,0.24);}
+
+    /* HULL TOP */
+    .s-main{
+      inset:16px 8px 42px;border-radius:50%;
+      background:
+        radial-gradient(circle at 30% 22%,rgba(255,255,255,0.98) 0 6%,rgba(255,255,255,0.18) 14%,transparent 28%),
+        radial-gradient(circle at 50% 46%,rgba(255,255,255,0.14) 0 30%,transparent 60%),
+        linear-gradient(180deg,#f9fbfd 0%,#eff4f7 24%,#e2eaf0 62%,#d6dfe7 100%);
+      box-shadow:
+        -18px -18px 30px rgba(255,255,255,0.98),
+        18px 24px 36px rgba(164,178,193,0.56),
+        inset -14px -14px 18px rgba(255,255,255,0.62),
+        inset 12px 16px 18px rgba(182,195,208,0.26);
+      transform:translateZ(14px);
+    }
+    .s-main::before{
+      content:"";position:absolute;inset:14px 16px 18px;border-radius:50%;
+      background:linear-gradient(180deg,rgba(255,255,255,0.28),rgba(255,255,255,0.04)),
+                 radial-gradient(circle at 50% 54%,rgba(255,255,255,0.05),transparent 62%);
+      box-shadow:inset -8px -8px 12px rgba(255,255,255,0.34),inset 8px 10px 14px rgba(173,188,203,0.12);
+      opacity:0.94;
+    }
+    .s-belly{
+      left:80px;right:80px;bottom:46px;height:54px;border-radius:50%;
+      background:linear-gradient(180deg,rgba(219,228,236,0.62),rgba(196,207,218,0.92));
+      box-shadow:inset 0 10px 12px rgba(255,255,255,0.34),inset 0 -10px 12px rgba(157,171,185,0.24);
+      transform:translateZ(0px) scaleY(0.82);opacity:0.98;
+    }
+    .s-rim{
+      inset:38px 50px 58px;border-radius:50%;
+      background:linear-gradient(145deg,rgba(255,255,255,0.72),rgba(212,221,230,0.62));
+      -webkit-mask:radial-gradient(circle,transparent 58%,black 63%,black 72%,transparent 77%);
+      mask:radial-gradient(circle,transparent 58%,black 63%,black 72%,transparent 77%);
+      box-shadow:inset -8px -8px 10px rgba(255,255,255,0.5),inset 8px 10px 10px rgba(181,195,209,0.18);
+      transform:translateZ(18px);
+    }
+    .s-ring-a{
+      inset:58px 74px 72px;border-radius:50%;
+      background:conic-gradient(from 90deg,rgba(255,255,255,0.28),rgba(255,255,255,0.06),rgba(57,223,200,0.16),rgba(255,194,92,0.22),rgba(255,255,255,0.28));
+      -webkit-mask:radial-gradient(circle,transparent 56%,black 61%,black 67%,transparent 72%);
+      mask:radial-gradient(circle,transparent 56%,black 61%,black 67%,transparent 72%);
+      opacity:0.06;transform:translateZ(22px) rotate(0deg);
+      transition:opacity 420ms ease,transform 520ms cubic-bezier(.16,1,.3,1);
+    }
+    .s-ring-b{
+      inset:86px 110px 96px;border-radius:50%;
+      background:conic-gradient(from 28deg,rgba(255,255,255,0.24),rgba(255,255,255,0),rgba(255,194,92,0.3),rgba(255,255,255,0),rgba(57,223,200,0.32),rgba(255,255,255,0.24));
+      -webkit-mask:radial-gradient(circle,transparent 48%,black 54%,black 60%,transparent 65%);
+      mask:radial-gradient(circle,transparent 48%,black 54%,black 60%,transparent 65%);
+      opacity:0.02;transform:translateZ(26px) rotate(0deg);
+      transition:opacity 520ms ease 90ms,transform 620ms cubic-bezier(.16,1,.3,1) 90ms;
+    }
+    .s-seams{
+      inset:68px 88px 82px;border-radius:50%;
+      background:conic-gradient(from 16deg,
+        transparent 0deg 18deg,rgba(147,160,174,0.34) 18deg 20deg,
+        transparent 20deg 78deg,rgba(147,160,174,0.32) 78deg 80deg,
+        transparent 80deg 148deg,rgba(147,160,174,0.3) 148deg 150deg,
+        transparent 150deg 218deg,rgba(147,160,174,0.26) 218deg 220deg,
+        transparent 220deg 288deg,rgba(147,160,174,0.24) 288deg 290deg,
+        transparent 290deg 360deg);
+      -webkit-mask:radial-gradient(circle,transparent 52%,black 58%,black 66%,transparent 71%);
+      mask:radial-gradient(circle,transparent 52%,black 58%,black 66%,transparent 71%);
+      opacity:0.18;transform:translateZ(23px);
+    }
+    .s-apertures{
+      inset:100px 124px 108px;border-radius:50%;
+      background:conic-gradient(from 10deg,
+        transparent 0deg 22deg,rgba(57,223,200,0.44) 22deg 30deg,
+        transparent 30deg 98deg,rgba(255,194,92,0.4) 98deg 106deg,
+        transparent 106deg 178deg,rgba(57,223,200,0.38) 178deg 186deg,
+        transparent 186deg 254deg,rgba(255,194,92,0.32) 254deg 262deg,
+        transparent 262deg 360deg);
+      -webkit-mask:radial-gradient(circle,transparent 38%,black 46%,black 54%,transparent 61%);
+      mask:radial-gradient(circle,transparent 38%,black 46%,black 54%,transparent 61%);
+      opacity:0;transform:translateZ(30px);
+      transition:opacity 580ms ease 180ms;
+    }
+    .s-veins{
+      inset:54px 70px 68px;border-radius:50%;opacity:0.02;
+      background:
+        radial-gradient(circle at 31% 48%,rgba(57,223,200,0.22) 0 0.8%,transparent 2%),
+        radial-gradient(circle at 41% 38%,rgba(255,255,255,0.18) 0 0.7%,transparent 1.8%),
+        radial-gradient(circle at 59% 37%,rgba(57,223,200,0.18) 0 0.8%,transparent 2%),
+        radial-gradient(circle at 68% 49%,rgba(255,255,255,0.16) 0 0.7%,transparent 1.8%),
+        radial-gradient(circle at 50% 58%,rgba(255,194,92,0.16) 0 0.8%,transparent 2%),
+        linear-gradient(118deg,transparent 0 31%,rgba(57,223,200,0.12) 32%,transparent 33%),
+        linear-gradient(59deg,transparent 0 43%,rgba(255,255,255,0.12) 44%,transparent 45%),
+        linear-gradient(141deg,transparent 0 58%,rgba(57,223,200,0.10) 59%,transparent 60%),
+        linear-gradient(24deg,transparent 0 52%,rgba(255,194,92,0.08) 53%,transparent 54%);
+      filter:blur(0.6px);transform:translateZ(28px);
+      transition:opacity 760ms ease 220ms;
+    }
+    .s-core{
+      left:50%;top:50%;width:76px;height:76px;border-radius:50%;
+      transform:translate(-50%,-20%) translateZ(34px);
+      background:
+        radial-gradient(circle at 45% 38%,rgba(255,255,255,0.98) 0 12%,rgba(255,255,255,0.22) 22%,transparent 36%),
+        radial-gradient(circle,rgba(57,223,200,0.9) 0,rgba(57,223,200,0.28) 34%,rgba(255,194,92,0.14) 58%,transparent 76%);
+      opacity:0.08;
+      box-shadow:0 0 8px rgba(57,223,200,0.42),0 0 14px rgba(255,255,255,0.16);
+      transition:opacity 640ms ease 280ms,box-shadow 640ms ease 280ms;
+    }
+    .s-shine{
+      inset:32px 32px 52px;border-radius:50%;
+      background:
+        radial-gradient(circle at var(--mx,50%) var(--my,50%),rgba(255,255,255,0.84) 0 5%,rgba(255,255,255,0.16) 14%,rgba(255,255,255,0) 28%),
+        linear-gradient(135deg,rgba(255,255,255,0.28),rgba(255,255,255,0) 36%,rgba(255,255,255,0.08) 56%,rgba(255,255,255,0) 76%);
+      mix-blend-mode:screen;opacity:0.4;transform:translateZ(32px);
+      transition:opacity 420ms ease;
+    }
+    .s-bursts{
+      inset:0;border-radius:50%;opacity:0.04;
+      background:
+        radial-gradient(circle at 34% 34%,rgba(57,223,200,0.02) 0 0.7%,transparent 2.1%),
+        radial-gradient(circle at 64% 36%,rgba(255,194,92,0.02) 0 0.68%,transparent 2%),
+        radial-gradient(circle at 74% 56%,rgba(176,140,255,0.01) 0 0.54%,transparent 1.7%),
+        radial-gradient(circle at 28% 68%,rgba(57,223,200,0.02) 0 0.72%,transparent 2.1%);
+      filter:blur(1px);transform:translateZ(36px);
+      animation:burstFlicker 3.3s steps(1,end) infinite;
+    }
+
+    /* ENGAGE SVG */
+    .engage-svg{
+      inset:0;opacity:0.08;
+      transform:translateY(5px) translateZ(40px);
+      transition:opacity 420ms ease,transform 520ms cubic-bezier(.16,1,.3,1),filter 520ms ease;
+    }
+    .engage-text{
+      font-family:Orbitron,Inter,sans-serif;font-size:20px;font-weight:800;
+      letter-spacing:0.32em;text-transform:uppercase;fill:rgba(248,251,254,0.94);
+      filter:drop-shadow(-1px -1px 0 rgba(255,255,255,0.92)) drop-shadow(1px 1px 1px rgba(152,168,184,0.42));
+    }
+    .engage-highlight{fill:url(#eg2f);opacity:0.52;}
+
+    /* CAPTION */
+    .caption{
+      position:absolute;left:50%;bottom:-10px;transform:translateX(-50%);
+      white-space:nowrap;z-index:8;font-size:12px;letter-spacing:0.22em;
+      text-transform:uppercase;color:rgba(79,96,111,0.72);
+      padding:10px 16px;border-radius:999px;
+      background:rgba(255,255,255,0.26);
+      box-shadow:12px 12px 24px rgba(170,183,198,0.24),-10px -10px 18px rgba(255,255,255,0.82);
+      backdrop-filter:blur(6px);
+    }
+
+    /* STATE OVERRIDES — mostly driven by JS for charge, but hover states here */
+    .scene[data-state="hover"] .s-ring-a,
+    .scene[data-state="charge"] .s-ring-a{opacity:0.9;transform:translateZ(22px) rotate(18deg);}
+    .scene[data-state="hover"] .s-ring-b{opacity:0.38;transform:translateZ(26px) rotate(-12deg);}
+    .scene[data-state="charge"] .s-ring-b{opacity:0.88;transform:translateZ(26px) rotate(-34deg);}
+    .scene[data-state="charge"] .s-apertures{opacity:0.9;}
+    .scene[data-state="hover"] .s-veins{opacity:0.18;}
+    .scene[data-state="charge"] .s-veins{opacity:0.92;}
+    .scene[data-state="hover"] .s-core{opacity:0.24;box-shadow:0 0 14px rgba(57,223,200,0.42),0 0 22px rgba(255,255,255,0.18);}
+    .scene[data-state="charge"] .s-core{opacity:1;box-shadow:0 0 24px rgba(57,223,200,0.52),0 0 44px rgba(255,255,255,0.28),0 0 60px rgba(255,194,92,0.14);}
+    .scene[data-state="hover"] .s-shine,
+    .scene[data-state="charge"] .s-shine{opacity:0.82;}
+    .scene[data-state="charge"] .s-bursts{
+      background:
+        radial-gradient(circle at 34% 34%,rgba(57,223,200,0.38) 0 0.7%,transparent 2.1%),
+        radial-gradient(circle at 64% 36%,rgba(255,194,92,0.46) 0 0.68%,transparent 2%),
+        radial-gradient(circle at 74% 56%,rgba(176,140,255,0.16) 0 0.54%,transparent 1.7%),
+        radial-gradient(circle at 28% 68%,rgba(57,223,200,0.34) 0 0.72%,transparent 2.1%);
+      opacity:0.92;
+    }
+    .scene[data-state="hover"] .engage-svg,
+    .scene[data-state="charge"] .engage-svg{opacity:1;transform:translateY(3px) translateZ(40px);}
+    .scene[data-state="charge"] .engage-svg{
+      filter:drop-shadow(0 0 6px rgba(255,255,255,0.48)) drop-shadow(0 0 22px rgba(255,255,255,0.36));
+    }
+
+    @keyframes burstFlicker{
+      0%,14%,18%,36%,40%,64%,67%,100%{opacity:0.42;}
+      16%,38%,66%{opacity:0.98;}
+    }
+    @media(prefers-reduced-motion:reduce){
+      *,*::before,*::after{animation-duration:0.01ms!important;animation-iteration-count:1!important;transition-duration:0.01ms!important;}
+    }
+  </style>
+</head>
+<body>
+  <main class="stage">
+    <section class="panel" aria-label="Repulsine launch control panel pass 2F">
+      <div class="panel-tag">Vril interface · pass 2G · craft-area tilt debugged · full-shell growth · 99px liftoff</div>
+
+      <div class="scene" id="scene" data-state="idle">
+        <div class="underlay" aria-hidden="true">
+          <div class="aura"></div>
+          <div class="well"></div>
+          <div class="field-shell" id="fieldShell"></div>
+          <div class="force-ring" id="forceRing"></div>
+          <div class="bio-halo" id="bioHalo"></div>
+          <div class="shadow-umbra" id="shadowUmbra"></div>
+        </div>
+
+        <div class="tilt-stage">
+          <div class="tilt-body" id="tiltBody">
+            <button class="saucer-button" id="saucerButton" aria-label="Engage Repulsine launch control">
+              <div class="s-underside"></div>
+              <div class="s-main"></div>
+              <div class="s-belly"></div>
+              <div class="s-rim"></div>
+              <div class="s-ring-a"></div>
+              <div class="s-ring-b"></div>
+              <div class="s-seams"></div>
+              <div class="s-apertures"></div>
+              <div class="s-veins"></div>
+              <div class="s-core"></div>
+              <div class="s-shine"></div>
+              <div class="s-bursts"></div>
+              <svg class="engage-svg" viewBox="0 0 410 240" aria-hidden="true">
+                <defs>
+                  <radialGradient id="eg2f" cx="50%" cy="50%" r="62%">
+                    <stop offset="0%" stop-color="#ffffff"/>
+                    <stop offset="32%" stop-color="#fbfdff"/>
+                    <stop offset="72%" stop-color="#e4ebf2"/>
+                    <stop offset="100%" stop-color="#ccd6df"/>
+                  </radialGradient>
+                  <path id="ea2f" d="M 106 152 A 99 24 0 0 0 304 152"/>
+                </defs>
+                <text class="engage-text engage-highlight">
+                  <textPath href="#ea2f" startOffset="50%" text-anchor="middle">ENGAGE</textPath>
+                </text>
+                <text class="engage-text" style="opacity:0.92">
+                  <textPath href="#ea2f" startOffset="50%" text-anchor="middle">ENGAGE</textPath>
+                </text>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="caption" id="caption">Hover the craft field · click to charge</div>
+      </div>
+
+      <div class="panel-note">craft hit-area for tilt · field grows beyond engage arc · 99px hover threshold</div>
+    </section>
+  </main>
+
+  <script>
+  (() => {
+    const scene       = document.getElementById('scene');
+    const tiltBody    = document.getElementById('tiltBody');
+    const saucer      = document.getElementById('saucerButton');
+    const fieldShell  = document.getElementById('fieldShell');
+    const forceRing   = document.getElementById('forceRing');
+    const bioHalo     = document.getElementById('bioHalo');
+    const shadow      = document.getElementById('shadowUmbra');
+    const caption     = document.getElementById('caption');
+
+    const clamp = (v,lo,hi) => Math.min(hi, Math.max(lo, v));
+
+    /* ── pointer-derived tilt from saucer center ── */
+    let lastRotX = 0, lastRotY = 0;
+
+    function applyTilt(e) {
+      const r  = document.getElementById('tiltBody').getBoundingClientRect();
+      const cx = r.left + r.width / 2;
+      const cy = r.top  + r.height / 2;
+      /* nx: -1 (left) → +1 (right)   ny: -1 (top) → +1 (bottom) */
+      const nx = clamp((e.clientX - cx) / (r.width  / 2), -1, 1);
+      const ny = clamp((e.clientY - cy) / (r.height / 2), -1, 1);
+
+      /* rotateY: positive = right side toward viewer */
+      lastRotY = nx * 14;
+      /* rotateX: positive = bottom toward viewer (forward tilt)
+         negative = top toward viewer → reveals underside               */
+      lastRotX = ny * 14;   /* ny positive = mouse below center = front tilt */
+
+      tiltBody.style.transform = `rotateX(${lastRotX.toFixed(2)}deg) rotateY(${lastRotY.toFixed(2)}deg)`;
+
+      /* specular shine follows cursor */
+      const mx = ((e.clientX - r.left) / r.width)  * 100;
+      const my = ((e.clientY - r.top)  / r.height) * 100;
+      saucer.style.setProperty('--mx', `${clamp(mx,0,100).toFixed(1)}%`);
+      saucer.style.setProperty('--my', `${clamp(my,0,100).toFixed(1)}%`);
+
+      /* back-tilt flag: mouse above center = negative rotateX = underside revealed */
+      scene.dataset.back = (lastRotX < -3) ? '1' : '0';
+    }
+
+    function resetTilt() {
+      lastRotX = 0; lastRotY = 0;
+      tiltBody.style.transform = 'rotateX(0deg) rotateY(0deg)';
+      saucer.style.setProperty('--mx','50%');
+      saucer.style.setProperty('--my','50%');
+      scene.dataset.back = '0';
+    }
+
+    /* ── progressive charge via rAF ── */
+    let chargeLevel = 0;   /* 0 → 1 */
+    let charging    = false;
+    let rafId       = null;
+
+    function tickCharge() {
+      if (!charging) {
+        /* drain */
+        chargeLevel = Math.max(chargeLevel - 0.009, 0);
+      } else {
+        chargeLevel = Math.min(chargeLevel + 0.007, 1);
+      }
+
+      const c = chargeLevel;
+
+      /* field shell: grows from tiny to 1.6× hull size */
+      const shellScale  = 0.42 + c * 1.92;
+      const shellOpacity= c < 0.05 ? 0 : 0.1 + c * 0.88;
+      const shellY      = -10 - c * 44;
+      fieldShell.style.transform = `translate(-50%,-50%) scale(${shellScale.toFixed(3)}) translateY(${shellY.toFixed(1)}px)`;
+      fieldShell.style.opacity   = shellOpacity.toFixed(3);
+
+      /* force ring expands outward during charge */
+      const frScale = 1 + c * 0.28;
+      const frY     = 20 + c * 22;
+      const frOp    = charging ? 0.84 + c * 0.16 : 0;
+      forceRing.style.transform = `translate(-50%,-50%) translateY(${frY.toFixed(1)}px) scale(${frScale.toFixed(3)})`;
+      forceRing.style.opacity   = frOp.toFixed(3);
+      forceRing.style.filter    = c > 0.6 ? `blur(${(c*3).toFixed(1)}px)` : 'none';
+
+      /* bio halo rotates and blooms */
+      const bhScale = 0.94 + c * 0.52;
+      const bhRot   = c * 54;
+      const bhOp    = c < 0.1 ? 0 : c * 0.92;
+      bioHalo.style.transform = `translate(-50%,-50%) scale(${bhScale.toFixed(3)}) rotate(${bhRot.toFixed(1)}deg)`;
+      bioHalo.style.opacity   = bhOp.toFixed(3);
+
+      /* saucer vertical lift — much more dramatic after 50% charge */
+      const liftPx = c < 0.5
+        ? -(c / 0.5) * 22
+        : -22 - ((c - 0.5) / 0.5) * 77;
+      saucer.style.transform = `translateY(${liftPx.toFixed(1)}px)`;
+
+      /* shadow stretches down and diffuses as craft rises */
+      const shadowY  = 156 + c * 96;
+      const shadowSc = 1 + c * 0.46;
+      const shadowOp = 0.28 + c * 0.42;
+      const shadowBl = 12 + c * 18;
+      shadow.style.transform = `translate(-50%,-50%) translateY(${shadowY.toFixed(1)}px) scale(${shadowSc.toFixed(3)})`;
+      shadow.style.opacity   = shadowOp.toFixed(3);
+      shadow.style.filter    = `blur(${shadowBl.toFixed(1)}px)`;
+
+      /* caption update */
+      if (c > 0.9 && charging) {
+        caption.textContent = 'Charge complete — Thule Triebwerk engaged';
+      } else if (c > 0 && charging) {
+        caption.textContent = `Charging… ${Math.round(c*100)}%`;
+      } else if (!charging && c < 0.05) {
+        caption.textContent = 'Hover the craft field · click to charge';
+      }
+
+      if (c > 0 || charging) {
+        rafId = requestAnimationFrame(tickCharge);
+      } else {
+        rafId = null;
+        saucer.style.transform = '';
+        shadow.style.transform = 'translate(-50%,-50%) translateY(156px) scale(1)';
+        shadow.style.opacity   = '0.28';
+        shadow.style.filter    = 'blur(12px)';
+        caption.textContent    = 'Hover the craft field · click to charge';
+      }
+    }
+
+    function startCharge() {
+      charging = true;
+      scene.dataset.state = 'charge';
+      if (!rafId) rafId = requestAnimationFrame(tickCharge);
+    }
+
+    function stopCharge() {
+      charging = false;
+      scene.dataset.state = chargeLevel > 0.02 ? 'hover' : 'idle';
+      if (!rafId && chargeLevel > 0) rafId = requestAnimationFrame(tickCharge);
+    }
+
+    /* ── event listeners ── */
+    scene.addEventListener('pointerenter', () => {
+      if (!charging && chargeLevel < 0.02) scene.dataset.state = 'hover';
+    });
+
+    scene.addEventListener('pointermove', (e) => {
+      applyTilt(e);
+      if (!charging && chargeLevel < 0.02) scene.dataset.state = 'hover';
+    });
+
+    scene.addEventListener('pointerleave', () => {
+      resetTilt();
+      if (!charging) stopCharge();
+      if (!charging && chargeLevel < 0.02) scene.dataset.state = 'idle';
+    });
+
+    scene.addEventListener('click', () => {
+      if (!charging) {
+        startCharge();
+      } else {
+        stopCharge();
+      }
+    });
+  })();
+  </script>
+</body>
+</html>

@@ -29,6 +29,9 @@ function isWebGLAvailable(): boolean {
   }
 }
 
+// Stable offset vector – avoids re-creating a new object every render
+const CHROMATIC_OFFSET = new THREE.Vector2(0.0018, 0.0018);
+
 export function RepulsineScene({ onBack }: RepulsineSceneProps) {
   const [autoRotate, setAutoRotate] = useState(true);
   const [isExploded, setIsExploded] = useState(false);
@@ -152,7 +155,7 @@ export function RepulsineScene({ onBack }: RepulsineSceneProps) {
               blendFunction={BlendFunction.ADD}
             />
             <ChromaticAberration
-              offset={new THREE.Vector2(0.0018, 0.0018)}
+              offset={CHROMATIC_OFFSET}
               blendFunction={BlendFunction.NORMAL}
               radialModulation={false}
               modulationOffset={0.5}

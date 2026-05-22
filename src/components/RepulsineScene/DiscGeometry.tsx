@@ -122,6 +122,13 @@ export function RepulsineDisc({
   const originalMatRef = useRef<THREE.Material | THREE.Material[] | null>(null);
   // Store hovered part metadata separately for continuous screenPos updates
   const hoveredMetaRef = useRef<Omit<HoveredPart, "screenPos"> | null>(null);
+  // Stable ref for onHover to avoid stale closure issues + throttle screen pos
+  const onHoverRef = useRef(onHover);
+  const lastScreenPosRef = useRef<{ x: number; y: number } | null>(null);
+
+  useEffect(() => {
+    onHoverRef.current = onHover;
+  }, [onHover]);
 
   const raycaster = useMemo(() => new THREE.Raycaster(), []);
   // Use a ref (not useMemo) so mutation inside the callback doesn't trigger lint warnings
@@ -165,14 +172,19 @@ export function RepulsineDisc({
 
     // Continuously update screenPos of the hovered object so the SVG
     // connector tracks it correctly while the craft auto-rotates or the
-    // camera moves.
+    // camera moves. Only trigger a state update when position changes
+    // significantly (>2px) to avoid render thrashing.
     if (hoveredRef.current && hoveredMetaRef.current) {
       const worldPos = new THREE.Vector3();
       hoveredRef.current.getWorldPosition(worldPos);
       worldPos.project(camera);
       const sx = (worldPos.x * 0.5 + 0.5) * window.innerWidth;
       const sy = (worldPos.y * -0.5 + 0.5) * window.innerHeight;
-      onHover({ ...hoveredMetaRef.current, screenPos: { x: sx, y: sy } });
+      const last = lastScreenPosRef.current;
+      if (!last || Math.abs(sx - last.x) > 2 || Math.abs(sy - last.y) > 2) {
+        lastScreenPosRef.current = { x: sx, y: sy };
+        onHoverRef.current({ ...hoveredMetaRef.current, screenPos: { x: sx, y: sy } });
+      }
     }
   });
 
@@ -232,10 +244,11 @@ export function RepulsineDisc({
         hoveredRef.current = null;
         originalMatRef.current = null;
         hoveredMetaRef.current = null;
-        onHover(null);
+        lastScreenPosRef.current = null;
+        onHoverRef.current(null);
       }
     },
-    [camera, getInteractables, highlightMat, onHover, raycaster]
+    [camera, getInteractables, highlightMat, raycaster]
   );
 
   // Attach mousemove handler once via effect (not per-frame)
