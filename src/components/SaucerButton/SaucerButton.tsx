@@ -159,9 +159,9 @@ export function SaucerButton({ onEngage }: SaucerButtonProps) {
         shadowUmbraRef.current.style.filter = "blur(12px)";
       }
       if (forceRingRef.current) {
-        forceRingRef.current.style.transform = "";
-        forceRingRef.current.style.opacity = "";
-        forceRingRef.current.style.filter = "";
+        forceRingRef.current.style.removeProperty("transform");
+        forceRingRef.current.style.removeProperty("opacity");
+        forceRingRef.current.style.removeProperty("filter");
       }
       if (captionRef.current) {
         captionRef.current.textContent = "Hover the craft field · click to charge";
