@@ -6,6 +6,7 @@ import { useFrame } from "@react-three/fiber";
 
 interface VortexParticlesProps {
   isDark: boolean;
+  isMobile?: boolean;
 }
 
 const GUST_COUNT = 30;
@@ -18,8 +19,10 @@ const GUST_PARAMS = Array.from({ length: GUST_COUNT }, (_, i) => ({
   heightTop: 15 + Math.random() * 5,
 }));
 
-export function VortexParticles({ isDark }: VortexParticlesProps) {
+export function VortexParticles({ isDark, isMobile = false }: VortexParticlesProps) {
   const windGroupRef = useRef<THREE.Group>(null);
+  const gustCount = isMobile ? 12 : GUST_COUNT;
+  const pointsPerGust = isMobile ? 30 : POINTS_PER_GUST;
 
   // Build static gust geometry once — no CPU work per frame
   const gustLines = useMemo(() => {
@@ -35,19 +38,16 @@ export function VortexParticles({ isDark }: VortexParticlesProps) {
       depthWrite: false,
     });
 
-    for (let i = 0; i < GUST_COUNT; i++) {
+    for (let i = 0; i < gustCount; i++) {
       const pts: THREE.Vector3[] = [];
       const { startAngleOffset, radiusTop, heightTop } = GUST_PARAMS[i];
       const radiusBottom = 0.2;
       const heightBottom = -4.9;
 
-      for (let j = 0; j <= POINTS_PER_GUST; j++) {
-        const t = j / POINTS_PER_GUST;
-        // Cycloidal: radius decreases as it spirals into the core
+      for (let j = 0; j <= pointsPerGust; j++) {
+        const t = j / pointsPerGust;
         const r = radiusTop * Math.pow(1 - t, 1.5) + radiusBottom;
         const y = heightTop * (1 - t) + heightBottom * t;
-        // Logarithmic spiral: angular velocity increases toward center
-        // (conservation of angular momentum: ω = L / (m·r²))
         const theta = startAngleOffset + t * Math.PI * 6;
         pts.push(
           new THREE.Vector3(Math.cos(theta) * r, y, Math.sin(theta) * r)
@@ -61,7 +61,7 @@ export function VortexParticles({ isDark }: VortexParticlesProps) {
     }
 
     return lines;
-  }, [isDark]);
+  }, [isDark, gustCount, pointsPerGust]);
 
   // Dispose GPU resources when theme changes or component unmounts
   useEffect(() => {

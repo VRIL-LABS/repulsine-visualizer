@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useRef, useState, useEffect } from "react";
+import { Suspense, useRef, useState, useEffect, useMemo } from "react";
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
 import { EffectComposer, Bloom, ChromaticAberration } from "@react-three/postprocessing";
@@ -29,6 +29,14 @@ function isWebGLAvailable(): boolean {
   }
 }
 
+/** Detect mobile/tablet devices to reduce GPU load. */
+function isMobileDevice(): boolean {
+  if (typeof window === "undefined") return false;
+  const ua = navigator.userAgent;
+  return /iPad|iPhone|iPod|Android/i.test(ua) ||
+    (navigator.maxTouchPoints > 1 && /Macintosh/i.test(ua));
+}
+
 // Stable offset vector – avoids re-creating a new object every render
 const CHROMATIC_OFFSET = new THREE.Vector2(0.0018, 0.0018);
 
@@ -37,12 +45,10 @@ export function RepulsineScene({ onBack }: RepulsineSceneProps) {
   const [isExploded, setIsExploded] = useState(false);
   const [theme, setTheme] = useState<"auto" | "dark" | "light">("dark");
   const [hoveredPart, setHoveredPart] = useState<HoveredPart | null>(null);
-  // Lazy initializer: check WebGL support once on the client.
-  // RepulsineScene is always loaded with { ssr: false }, so typeof window
-  // is never 'undefined' here and there is no risk of an SSR/hydration mismatch.
   const [webglSupported] = useState<boolean>(() =>
     typeof window !== "undefined" ? isWebGLAvailable() : true
   );
+  const isMobile = useMemo(() => isMobileDevice(), []);
   const themes: Array<"auto" | "dark" | "light"> = ["dark", "light", "auto"];
   const themeIdx = useRef(0);
 
@@ -120,17 +126,22 @@ export function RepulsineScene({ onBack }: RepulsineSceneProps) {
       {/* R3F Canvas */}
       <Canvas
         gl={{
-          antialias: true,
+          antialias: !isMobile,
           alpha: false,
           powerPreference: "high-performance",
+          // Reduce render buffer precision on mobile to save VRAM
+          ...(isMobile ? { depth: true, stencil: false } : {}),
         }}
         camera={{ position: [0, 18, 45], fov: 40 }}
-        shadows
+        shadows={!isMobile}
         style={{ position: "absolute", inset: 0 }}
         onCreated={({ gl }) => {
-          gl.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-          gl.shadowMap.enabled = true;
-          gl.shadowMap.type = THREE.PCFSoftShadowMap;
+          // Cap pixel ratio: 1.5 on mobile (prevents iPad GPU OOM), 2 on desktop
+          gl.setPixelRatio(Math.min(window.devicePixelRatio, isMobile ? 1.5 : 2));
+          if (!isMobile) {
+            gl.shadowMap.enabled = true;
+            gl.shadowMap.type = THREE.PCFSoftShadowMap;
+          }
         }}
       >
         <color attach="background" args={[bgColor]} />
@@ -144,23 +155,26 @@ export function RepulsineScene({ onBack }: RepulsineSceneProps) {
             onHover={setHoveredPart}
             isDark={isDark}
           />
-          <VortexParticles isDark={isDark} />
+          <VortexParticles isDark={isDark} isMobile={isMobile} />
 
-          <EffectComposer>
-            <Bloom
-              luminanceThreshold={isDark ? 0.55 : 0.75}
-              luminanceSmoothing={0.3}
-              intensity={isDark ? 1.6 : 0.7}
-              radius={0.85}
-              blendFunction={BlendFunction.ADD}
-            />
-            <ChromaticAberration
-              offset={CHROMATIC_OFFSET}
-              blendFunction={BlendFunction.NORMAL}
-              radialModulation={false}
-              modulationOffset={0.5}
-            />
-          </EffectComposer>
+          {/* Post-processing: disabled on mobile to prevent Safari GPU crash */}
+          {!isMobile && (
+            <EffectComposer>
+              <Bloom
+                luminanceThreshold={isDark ? 0.55 : 0.75}
+                luminanceSmoothing={0.3}
+                intensity={isDark ? 1.6 : 0.7}
+                radius={0.85}
+                blendFunction={BlendFunction.ADD}
+              />
+              <ChromaticAberration
+                offset={CHROMATIC_OFFSET}
+                blendFunction={BlendFunction.NORMAL}
+                radialModulation={false}
+                modulationOffset={0.5}
+              />
+            </EffectComposer>
+          )}
         </Suspense>
 
         <OrbitControls
@@ -168,7 +182,7 @@ export function RepulsineScene({ onBack }: RepulsineSceneProps) {
           dampingFactor={0.05}
           minDistance={15}
           maxDistance={80}
-          maxPolarAngle={Math.PI / 2 - 0.05}
+          maxPolarAngle={Math.PI * 0.85}
         />
       </Canvas>
 

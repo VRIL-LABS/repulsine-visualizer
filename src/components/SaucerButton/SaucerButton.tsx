@@ -27,8 +27,15 @@ export function SaucerButton({ onEngage }: SaucerButtonProps) {
   const lastRotYRef = useRef(0);
   const engagedRef = useRef(false);
 
-  const clamp = (v: number, lo: number, hi: number) =>
-    Math.min(hi, Math.max(lo, v));
+  const updateUnderside = useCallback(() => {
+    const scene = sceneRef.current;
+    if (!scene) return;
+    const bf = Math.min(1, Math.max(0, -lastRotXRef.current / 18));
+    const cf = chargeLevelRef.current * 0.52;
+    const u = Math.max(bf, cf);
+    scene.dataset.back = u > 0.1 ? "1" : "0";
+    scene.style.setProperty("--underside-opacity", u.toFixed(3));
+  }, []);
 
   const applyTilt = useCallback(
     (e: PointerEvent) => {
@@ -40,23 +47,23 @@ export function SaucerButton({ onEngage }: SaucerButtonProps) {
       const r = tiltBody.getBoundingClientRect();
       const cx = r.left + r.width / 2;
       const cy = r.top + r.height / 2;
-      const nx = clamp((e.clientX - cx) / (r.width / 2), -1, 1);
-      const ny = clamp((e.clientY - cy) / (r.height / 2), -1, 1);
+      const nx = Math.min(1, Math.max(-1, (e.clientX - cx) / (r.width / 2)));
+      const ny = Math.min(1, Math.max(-1, (e.clientY - cy) / (r.height / 2)));
 
-      lastRotYRef.current = nx * 14;
-      lastRotXRef.current = ny * 14;
+      lastRotYRef.current = nx * 18;
+      lastRotXRef.current = ny * 20;
       tiltBody.style.transform = `rotateX(${lastRotXRef.current.toFixed(2)}deg) rotateY(${lastRotYRef.current.toFixed(2)}deg)`;
 
       // Specular shine follows cursor
       const mx = ((e.clientX - r.left) / r.width) * 100;
       const my = ((e.clientY - r.top) / r.height) * 100;
-      saucer.style.setProperty("--mx", `${clamp(mx, 0, 100).toFixed(1)}%`);
-      saucer.style.setProperty("--my", `${clamp(my, 0, 100).toFixed(1)}%`);
+      saucer.style.setProperty("--mx", `${Math.min(100, Math.max(0, mx)).toFixed(1)}%`);
+      saucer.style.setProperty("--my", `${Math.min(100, Math.max(0, my)).toFixed(1)}%`);
 
-      // Back-tilt flag: mouse above center reveals underside
-      scene.dataset.back = lastRotXRef.current < -3 ? "1" : "0";
+      // Underside reveal: driven by back-tilt AND charge level
+      updateUnderside();
     },
-    [],
+    [updateUnderside],
   );
 
   const resetTilt = useCallback(() => {
@@ -68,7 +75,10 @@ export function SaucerButton({ onEngage }: SaucerButtonProps) {
       saucerRef.current.style.setProperty("--mx", "50%");
       saucerRef.current.style.setProperty("--my", "50%");
     }
-    if (sceneRef.current) sceneRef.current.dataset.back = "0";
+    if (sceneRef.current) {
+      sceneRef.current.dataset.back = "0";
+      sceneRef.current.style.setProperty("--underside-opacity", "0");
+    }
   }, []);
 
   // Stable ref so tickCharge can schedule itself without a self-reference TDZ issue
@@ -77,25 +87,25 @@ export function SaucerButton({ onEngage }: SaucerButtonProps) {
   const tickCharge = useCallback(() => {
     const charging = chargingRef.current;
     chargeLevelRef.current = charging
-      ? Math.min(chargeLevelRef.current + 0.007, 1)
-      : Math.max(chargeLevelRef.current - 0.009, 0);
+      ? Math.min(chargeLevelRef.current + 0.011, 1)
+      : Math.max(chargeLevelRef.current - 0.014, 0);
 
     const c = chargeLevelRef.current;
 
-    // Field shell: grows from tiny to 1.6× hull size
+    // Field shell: expands from nearly invisible to envelop the saucer (anti-gravity cavity)
     if (fieldShellRef.current) {
-      const shellScale = 0.42 + c * 1.92;
-      const shellOpacity = c < 0.05 ? 0 : 0.1 + c * 0.88;
-      const shellY = -10 - c * 44;
+      const shellScale = c < 0.08 ? 0.01 : 0.18 + c * 2.72;
+      const shellOpacity = c < 0.08 ? 0 : (c - 0.08) / 0.92 * 0.98;
+      const shellY = -8 - c * 50;
       fieldShellRef.current.style.transform = `translate(-50%,-50%) scale(${shellScale.toFixed(3)}) translateY(${shellY.toFixed(1)}px)`;
       fieldShellRef.current.style.opacity = shellOpacity.toFixed(3);
     }
 
     // Force ring expands outward during charge
     if (forceRingRef.current) {
-      const frScale = 1 + c * 0.28;
-      const frY = 20 + c * 22;
-      const frOp = charging ? 0.84 + c * 0.16 : 0;
+      const frScale = 0.92 + c * 0.40;
+      const frY = 14 + c * 30;
+      const frOp = c < 0.10 ? 0 : 0.75 + (c - 0.10) / 0.90 * 0.25;
       forceRingRef.current.style.transform = `translate(-50%,-50%) translateY(${frY.toFixed(1)}px) scale(${frScale.toFixed(3)})`;
       forceRingRef.current.style.opacity = frOp.toFixed(3);
       forceRingRef.current.style.filter = c > 0.6 ? `blur(${(c * 3).toFixed(1)}px)` : "none";
@@ -110,24 +120,27 @@ export function SaucerButton({ onEngage }: SaucerButtonProps) {
       bioHaloRef.current.style.opacity = bhOp.toFixed(3);
     }
 
-    // Saucer vertical lift — dramatic after 50% charge
+    // Saucer vertical lift — dramatic after 45% charge
     if (saucerRef.current) {
-      const liftPx = c < 0.5
-        ? -(c / 0.5) * 22
-        : -22 - ((c - 0.5) / 0.5) * 77;
+      const liftPx = c < 0.45
+        ? -(c / 0.45) * 22
+        : -22 - ((c - 0.45) / 0.55) * 77;
       saucerRef.current.style.transform = `translateY(${liftPx.toFixed(1)}px)`;
     }
 
     // Shadow stretches down and diffuses as craft rises
     if (shadowUmbraRef.current) {
-      const shadowY = 156 + c * 96;
-      const shadowSc = 1 + c * 0.46;
-      const shadowOp = 0.28 + c * 0.42;
-      const shadowBl = 12 + c * 18;
+      const shadowY = 168 + c * 112;
+      const shadowSc = 1 + c * 0.55;
+      const shadowOp = 0.3 - c * 0.18;
+      const shadowBl = 12 + c * 22;
       shadowUmbraRef.current.style.transform = `translate(-50%,-50%) translateY(${shadowY.toFixed(1)}px) scale(${shadowSc.toFixed(3)})`;
       shadowUmbraRef.current.style.opacity = shadowOp.toFixed(3);
       shadowUmbraRef.current.style.filter = `blur(${shadowBl.toFixed(1)}px)`;
     }
+
+    // Update underside visibility based on charge level
+    updateUnderside();
 
     // Caption update
     if (captionRef.current) {
@@ -142,7 +155,7 @@ export function SaucerButton({ onEngage }: SaucerButtonProps) {
         captionRef.current.textContent = `Charging Vril capacitors… ${Math.round(c * 100)}%`;
       } else if (!charging && c < 0.05) {
         captionRef.current.textContent =
-          "Hover the craft field · click to charge";
+          "Hover · tilt toward top to reveal Triebwerk · click to charge";
       } else if (!charging) {
         captionRef.current.textContent = `Discharge… ${Math.round(c * 100)}%`;
       }
@@ -154,8 +167,8 @@ export function SaucerButton({ onEngage }: SaucerButtonProps) {
       rafIdRef.current = null;
       if (saucerRef.current) saucerRef.current.style.transform = "";
       if (shadowUmbraRef.current) {
-        shadowUmbraRef.current.style.transform = "translate(-50%,-50%) translateY(156px) scale(1)";
-        shadowUmbraRef.current.style.opacity = "0.28";
+        shadowUmbraRef.current.style.transform = "translate(-50%,-50%) translateY(168px) scale(1)";
+        shadowUmbraRef.current.style.opacity = "0.3";
         shadowUmbraRef.current.style.filter = "blur(12px)";
       }
       if (forceRingRef.current) {
@@ -164,11 +177,11 @@ export function SaucerButton({ onEngage }: SaucerButtonProps) {
         forceRingRef.current.style.removeProperty("filter");
       }
       if (captionRef.current) {
-        captionRef.current.textContent = "Hover the craft field · click to charge";
+        captionRef.current.textContent = "Hover · tilt toward top to reveal Triebwerk · click to charge";
       }
       resetTilt();
     }
-  }, [resetTilt, onEngage]);
+  }, [resetTilt, onEngage, updateUnderside]);
 
   // Sync the ref after render so the RAF loop always uses the latest closure
   useEffect(() => {
@@ -342,7 +355,7 @@ export function SaucerButton({ onEngage }: SaucerButtonProps) {
           </div>
 
           <div ref={captionRef} className={styles.caption}>
-            Hover the craft field · click to charge
+            Hover · tilt toward top to reveal Triebwerk · click to charge
           </div>
         </div>
 
