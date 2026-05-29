@@ -218,6 +218,9 @@ export function RepulsineDisc({
           originalMatRef.current = (obj as THREE.Mesh).material;
           (obj as THREE.Mesh).material = highlightMat;
 
+          // Reset screen-pos throttle so onHover fires immediately for new object
+          lastScreenPosRef.current = null;
+
           const ud = obj.userData as {
             name: string;
             desc: string;

@@ -158,6 +158,11 @@ export function SaucerButton({ onEngage }: SaucerButtonProps) {
         shadowUmbraRef.current.style.opacity = "0.28";
         shadowUmbraRef.current.style.filter = "blur(12px)";
       }
+      if (forceRingRef.current) {
+        forceRingRef.current.style.transform = "";
+        forceRingRef.current.style.opacity = "";
+        forceRingRef.current.style.filter = "";
+      }
       if (captionRef.current) {
         captionRef.current.textContent = "Hover the craft field · click to charge";
       }
@@ -241,7 +246,6 @@ export function SaucerButton({ onEngage }: SaucerButtonProps) {
           ref={sceneRef}
           className={styles.scene}
           data-state={sceneState}
-          data-back="0"
         >
           {/* 2D underlay */}
           <div className={styles.underlay} aria-hidden="true">
@@ -261,8 +265,10 @@ export function SaucerButton({ onEngage }: SaucerButtonProps) {
                 className={styles.saucer}
                 aria-label="Engage Haunebu launch sequence"
                 onClick={(e) => {
-                  // Handle keyboard activation (Enter/Space)
+                  // Handle keyboard activation (Enter/Space); stop propagation
+                  // to prevent the scene click listener from firing too.
                   if (e.detail === 0) {
+                    e.stopPropagation();
                     if (!chargingRef.current) startCharge();
                     else stopCharge();
                   }
