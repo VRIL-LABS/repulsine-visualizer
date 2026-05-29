@@ -13,10 +13,9 @@ export function SaucerButton({ onEngage }: SaucerButtonProps) {
   const sceneRef = useRef<HTMLDivElement>(null);
   const tiltBodyRef = useRef<HTMLDivElement>(null);
   const saucerRef = useRef<HTMLButtonElement>(null);
-  const sShineRef = useRef<HTMLDivElement>(null);
-  const sUndersideRef = useRef<HTMLDivElement>(null);
   const fieldShellRef = useRef<HTMLDivElement>(null);
   const forceRingRef = useRef<HTMLDivElement>(null);
+  const bioHaloRef = useRef<HTMLDivElement>(null);
   const shadowUmbraRef = useRef<HTMLDivElement>(null);
   const captionRef = useRef<HTMLDivElement>(null);
 
@@ -31,63 +30,46 @@ export function SaucerButton({ onEngage }: SaucerButtonProps) {
   const clamp = (v: number, lo: number, hi: number) =>
     Math.min(hi, Math.max(lo, v));
 
-  const setUnderside = useCallback(() => {
-    const u = clamp(
-      Math.max(-lastRotXRef.current / 18, chargeLevelRef.current * 0.52),
-      0,
-      1,
-    );
-    if (sUndersideRef.current) {
-      sUndersideRef.current.style.opacity = u.toFixed(3);
-      sUndersideRef.current.style.transform = `translateZ(28px) translateY(${(-(-lastRotXRef.current / 18) * 18).toFixed(1)}px) scale(${(0.9 + u * 0.12).toFixed(3)})`;
-    }
-  }, []);
-
   const applyTilt = useCallback(
     (e: PointerEvent) => {
-      const scene = sceneRef.current;
       const tiltBody = tiltBodyRef.current;
       const saucer = saucerRef.current;
-      const sShine = sShineRef.current;
-      if (!scene || !tiltBody || !saucer || !sShine) return;
+      const scene = sceneRef.current;
+      if (!tiltBody || !saucer || !scene) return;
 
-      const r = scene.getBoundingClientRect();
+      const r = tiltBody.getBoundingClientRect();
       const cx = r.left + r.width / 2;
       const cy = r.top + r.height / 2;
       const nx = clamp((e.clientX - cx) / (r.width / 2), -1, 1);
       const ny = clamp((e.clientY - cy) / (r.height / 2), -1, 1);
-      lastRotYRef.current = nx * 18;
-      lastRotXRef.current = ny * 20;
+
+      lastRotYRef.current = nx * 14;
+      lastRotXRef.current = ny * 14;
       tiltBody.style.transform = `rotateX(${lastRotXRef.current.toFixed(2)}deg) rotateY(${lastRotYRef.current.toFixed(2)}deg)`;
 
-      const sr = saucer.getBoundingClientRect();
-      const mx = ((e.clientX - sr.left) / sr.width) * 100;
-      const my = ((e.clientY - sr.top) / sr.height) * 100;
-      sShine.style.setProperty(
-        "--mx",
-        `${clamp(mx, 0, 100).toFixed(1)}%`,
-      );
-      sShine.style.setProperty(
-        "--my",
-        `${clamp(my, 0, 100).toFixed(1)}%`,
-      );
-      setUnderside();
+      // Specular shine follows cursor
+      const mx = ((e.clientX - r.left) / r.width) * 100;
+      const my = ((e.clientY - r.top) / r.height) * 100;
+      saucer.style.setProperty("--mx", `${clamp(mx, 0, 100).toFixed(1)}%`);
+      saucer.style.setProperty("--my", `${clamp(my, 0, 100).toFixed(1)}%`);
+
+      // Back-tilt flag: mouse above center reveals underside
+      scene.dataset.back = lastRotXRef.current < -3 ? "1" : "0";
     },
-    [setUnderside],
+    [],
   );
 
   const resetTilt = useCallback(() => {
     lastRotXRef.current = 0;
     lastRotYRef.current = 0;
     if (tiltBodyRef.current)
-      tiltBodyRef.current.style.transform =
-        "rotateX(0deg) rotateY(0deg)";
-    if (sShineRef.current) {
-      sShineRef.current.style.setProperty("--mx", "50%");
-      sShineRef.current.style.setProperty("--my", "50%");
+      tiltBodyRef.current.style.transform = "rotateX(0deg) rotateY(0deg)";
+    if (saucerRef.current) {
+      saucerRef.current.style.setProperty("--mx", "50%");
+      saucerRef.current.style.setProperty("--my", "50%");
     }
-    setUnderside();
-  }, [setUnderside]);
+    if (sceneRef.current) sceneRef.current.dataset.back = "0";
+  }, []);
 
   // Stable ref so tickCharge can schedule itself without a self-reference TDZ issue
   const tickChargeRef = useRef<(() => void) | null>(null);
@@ -95,98 +77,149 @@ export function SaucerButton({ onEngage }: SaucerButtonProps) {
   const tickCharge = useCallback(() => {
     const charging = chargingRef.current;
     chargeLevelRef.current = charging
-      ? Math.min(chargeLevelRef.current + 0.011, 1)
-      : Math.max(chargeLevelRef.current - 0.014, 0);
+      ? Math.min(chargeLevelRef.current + 0.007, 1)
+      : Math.max(chargeLevelRef.current - 0.009, 0);
 
     const c = chargeLevelRef.current;
 
+    // Field shell: grows from tiny to 1.6× hull size
     if (fieldShellRef.current) {
-      const shellOpacity = c < 0.08 ? 0 : ((c - 0.08) / 0.92) * 0.98;
-      const shellScale = c < 0.08 ? 0.01 : 0.18 + c * 2.72;
+      const shellScale = 0.42 + c * 1.92;
+      const shellOpacity = c < 0.05 ? 0 : 0.1 + c * 0.88;
+      const shellY = -10 - c * 44;
+      fieldShellRef.current.style.transform = `translate(-50%,-50%) scale(${shellScale.toFixed(3)}) translateY(${shellY.toFixed(1)}px)`;
       fieldShellRef.current.style.opacity = shellOpacity.toFixed(3);
-      fieldShellRef.current.style.transform = `translate(-50%,-50%) scale(${shellScale.toFixed(3)}) translateY(${(-8 - c * 50).toFixed(1)}px)`;
     }
-    if (forceRingRef.current) {
-      forceRingRef.current.style.opacity = (
-        c < 0.1 ? 0 : 0.75 + ((c - 0.1) / 0.9) * 0.25
-      ).toFixed(3);
-      forceRingRef.current.style.transform = `translate(-50%,-50%) translateY(${(14 + c * 30).toFixed(1)}px) scale(${(0.92 + c * 0.4).toFixed(3)})`;
-    }
-    if (saucerRef.current) {
-      const liftPx =
-        c < 0.45 ? -(c / 0.45) * 22 : -22 - ((c - 0.45) / 0.55) * 77;
-      saucerRef.current.style.transform = `translateY(${liftPx.toFixed(2)}px)`;
-    }
-    if (shadowUmbraRef.current) {
-      shadowUmbraRef.current.style.transform = `translate(-50%,-50%) translateY(${(168 + c * 112).toFixed(1)}px) scale(${(1 + c * 0.55).toFixed(3)})`;
-      shadowUmbraRef.current.style.filter = `blur(${(12 + c * 22).toFixed(1)}px)`;
-      shadowUmbraRef.current.style.opacity = (0.3 - c * 0.18).toFixed(3);
-    }
-    setUnderside();
 
+    // Force ring expands outward during charge
+    if (forceRingRef.current) {
+      const frScale = 1 + c * 0.28;
+      const frY = 20 + c * 22;
+      const frOp = charging ? 0.84 + c * 0.16 : 0;
+      forceRingRef.current.style.transform = `translate(-50%,-50%) translateY(${frY.toFixed(1)}px) scale(${frScale.toFixed(3)})`;
+      forceRingRef.current.style.opacity = frOp.toFixed(3);
+      forceRingRef.current.style.filter = c > 0.6 ? `blur(${(c * 3).toFixed(1)}px)` : "none";
+    }
+
+    // Bio halo rotates and blooms
+    if (bioHaloRef.current) {
+      const bhScale = 0.94 + c * 0.52;
+      const bhRot = c * 54;
+      const bhOp = c < 0.1 ? 0 : c * 0.92;
+      bioHaloRef.current.style.transform = `translate(-50%,-50%) scale(${bhScale.toFixed(3)}) rotate(${bhRot.toFixed(1)}deg)`;
+      bioHaloRef.current.style.opacity = bhOp.toFixed(3);
+    }
+
+    // Saucer vertical lift — dramatic after 50% charge
+    if (saucerRef.current) {
+      const liftPx = c < 0.5
+        ? -(c / 0.5) * 22
+        : -22 - ((c - 0.5) / 0.5) * 77;
+      saucerRef.current.style.transform = `translateY(${liftPx.toFixed(1)}px)`;
+    }
+
+    // Shadow stretches down and diffuses as craft rises
+    if (shadowUmbraRef.current) {
+      const shadowY = 156 + c * 96;
+      const shadowSc = 1 + c * 0.46;
+      const shadowOp = 0.28 + c * 0.42;
+      const shadowBl = 12 + c * 18;
+      shadowUmbraRef.current.style.transform = `translate(-50%,-50%) translateY(${shadowY.toFixed(1)}px) scale(${shadowSc.toFixed(3)})`;
+      shadowUmbraRef.current.style.opacity = shadowOp.toFixed(3);
+      shadowUmbraRef.current.style.filter = `blur(${shadowBl.toFixed(1)}px)`;
+    }
+
+    // Caption update
     if (captionRef.current) {
       if (c > 0.985) {
         captionRef.current.textContent =
           "Thule Triebwerk engaged — field threshold breached";
         if (!engagedRef.current) {
           engagedRef.current = true;
-          // Trigger navigation after a brief pause
           setTimeout(() => onEngage(), 600);
         }
-      } else if (charging) {
+      } else if (c > 0 && charging) {
         captionRef.current.textContent = `Charging Vril capacitors… ${Math.round(c * 100)}%`;
-      } else if (c < 0.02) {
+      } else if (!charging && c < 0.05) {
         captionRef.current.textContent =
-          "Hover · tilt to reveal Triebwerk · click to charge";
-      } else {
+          "Hover the craft field · click to charge";
+      } else if (!charging) {
         captionRef.current.textContent = `Discharge… ${Math.round(c * 100)}%`;
       }
     }
 
-    if (charging || c > 0.005) {
+    if (c > 0 || charging) {
       rafIdRef.current = requestAnimationFrame(() => tickChargeRef.current?.());
     } else {
       rafIdRef.current = null;
+      if (saucerRef.current) saucerRef.current.style.transform = "";
+      if (shadowUmbraRef.current) {
+        shadowUmbraRef.current.style.transform = "translate(-50%,-50%) translateY(156px) scale(1)";
+        shadowUmbraRef.current.style.opacity = "0.28";
+        shadowUmbraRef.current.style.filter = "blur(12px)";
+      }
+      if (forceRingRef.current) {
+        forceRingRef.current.style.removeProperty("transform");
+        forceRingRef.current.style.removeProperty("opacity");
+        forceRingRef.current.style.removeProperty("filter");
+      }
+      if (captionRef.current) {
+        captionRef.current.textContent = "Hover the craft field · click to charge";
+      }
       resetTilt();
     }
-  }, [setUnderside, resetTilt, onEngage]);
+  }, [resetTilt, onEngage]);
 
   // Sync the ref after render so the RAF loop always uses the latest closure
   useEffect(() => {
     tickChargeRef.current = tickCharge;
   }, [tickCharge]);
 
-  const toggleCharge = useCallback(() => {
-    chargingRef.current = !chargingRef.current;
-    setSceneState(chargingRef.current ? "charge" : "hover");
+  const startCharge = useCallback(() => {
+    chargingRef.current = true;
+    setSceneState("charge");
     if (!rafIdRef.current && tickChargeRef.current)
+      rafIdRef.current = requestAnimationFrame(tickChargeRef.current);
+  }, []);
+
+  const stopCharge = useCallback(() => {
+    chargingRef.current = false;
+    setSceneState(chargeLevelRef.current > 0.02 ? "hover" : "idle");
+    if (!rafIdRef.current && chargeLevelRef.current > 0 && tickChargeRef.current)
       rafIdRef.current = requestAnimationFrame(tickChargeRef.current);
   }, []);
 
   useEffect(() => {
     const scene = sceneRef.current;
-    const saucer = saucerRef.current;
-    if (!scene || !saucer) return;
+    if (!scene) return;
 
     const handlePointerEnter = () => {
       if (!chargingRef.current && chargeLevelRef.current < 0.02)
         setSceneState("hover");
     };
-    const handlePointerMove = (e: PointerEvent) => applyTilt(e);
+    const handlePointerMove = (e: PointerEvent) => {
+      applyTilt(e);
+      if (!chargingRef.current && chargeLevelRef.current < 0.02)
+        setSceneState("hover");
+    };
     const handlePointerLeave = () => {
       resetTilt();
+      if (!chargingRef.current) stopCharge();
       if (!chargingRef.current && chargeLevelRef.current < 0.02)
         setSceneState("idle");
     };
-    const handlePointerDown = (e: PointerEvent) => {
-      e.preventDefault();
-      toggleCharge();
+    const handleClick = () => {
+      if (!chargingRef.current) {
+        startCharge();
+      } else {
+        stopCharge();
+      }
     };
 
     scene.addEventListener("pointerenter", handlePointerEnter);
     scene.addEventListener("pointermove", handlePointerMove);
     scene.addEventListener("pointerleave", handlePointerLeave);
-    saucer.addEventListener("pointerdown", handlePointerDown);
+    scene.addEventListener("click", handleClick);
 
     resetTilt();
 
@@ -194,10 +227,10 @@ export function SaucerButton({ onEngage }: SaucerButtonProps) {
       scene.removeEventListener("pointerenter", handlePointerEnter);
       scene.removeEventListener("pointermove", handlePointerMove);
       scene.removeEventListener("pointerleave", handlePointerLeave);
-      saucer.removeEventListener("pointerdown", handlePointerDown);
+      scene.removeEventListener("click", handleClick);
       if (rafIdRef.current) cancelAnimationFrame(rafIdRef.current);
     };
-  }, [applyTilt, resetTilt, toggleCharge]);
+  }, [applyTilt, resetTilt, startCharge, stopCharge]);
 
   return (
     <main className={styles.stage}>
@@ -206,12 +239,12 @@ export function SaucerButton({ onEngage }: SaucerButtonProps) {
         aria-label="Repulsine launch control"
       >
         <div className={styles.panelTag}>
-          Vril Interface · Haunebu Hull · Dome + Disc + Triebwerk
+          Vril Interface · Haunebu Hull · Pass 2G
         </div>
 
         <div
           ref={sceneRef}
-          className={`${styles.scene} ${styles[`scene--${sceneState}`]}`}
+          className={styles.scene}
           data-state={sceneState}
         >
           {/* 2D underlay */}
@@ -220,6 +253,7 @@ export function SaucerButton({ onEngage }: SaucerButtonProps) {
             <div className={styles.well} />
             <div ref={fieldShellRef} className={styles.fieldShell} />
             <div ref={forceRingRef} className={styles.forceRing} />
+            <div ref={bioHaloRef} className={styles.bioHalo} />
             <div ref={shadowUmbraRef} className={styles.shadowUmbra} />
           </div>
 
@@ -231,29 +265,35 @@ export function SaucerButton({ onEngage }: SaucerButtonProps) {
                 className={styles.saucer}
                 aria-label="Engage Haunebu launch sequence"
                 onClick={(e) => {
-                  // Handle keyboard activation (Enter/Space); pointer already handled by pointerdown
-                  if (e.detail === 0) toggleCharge();
+                  // Handle keyboard activation (Enter/Space); stop propagation
+                  // to prevent the scene click listener from firing too.
+                  if (e.detail === 0) {
+                    e.stopPropagation();
+                    if (!chargingRef.current) startCharge();
+                    else stopCharge();
+                  }
                 }}
               >
-                <div className={styles.sDisc} />
-                <div className={styles.sEquator} />
-                <div className={styles.sDome} />
-                <div className={styles.sDomeRim} />
+                <div className={styles.sUnderside} />
+                <div className={styles.sMain} />
                 <div className={styles.sBelly} />
+                <div className={styles.sRim} />
                 <div className={styles.sRingA} />
                 <div className={styles.sRingB} />
                 <div className={styles.sSeams} />
                 <div className={styles.sApertures} />
+                <div className={styles.sVeins} />
+                <div className={styles.sCore} />
                 <div
-                  ref={sShineRef}
                   className={styles.sShine}
                   style={
                     { "--mx": "50%", "--my": "50%" } as React.CSSProperties
                   }
                 />
+                <div className={styles.sBursts} />
                 <svg
                   className={styles.engageSvg}
-                  viewBox="0 0 480 300"
+                  viewBox="0 0 410 240"
                   aria-hidden="true"
                 >
                   <defs>
@@ -261,21 +301,32 @@ export function SaucerButton({ onEngage }: SaucerButtonProps) {
                       id="engageGrad"
                       cx="50%"
                       cy="50%"
-                      r="60%"
+                      r="62%"
                     >
                       <stop offset="0%" stopColor="#ffffff" />
-                      <stop offset="28%" stopColor="#fafcff" />
-                      <stop offset="68%" stopColor="#dce8f2" />
-                      <stop offset="100%" stopColor="#c4d2de" />
+                      <stop offset="32%" stopColor="#fbfdff" />
+                      <stop offset="72%" stopColor="#e4ebf2" />
+                      <stop offset="100%" stopColor="#ccd6df" />
                     </radialGradient>
                     <path
                       id="engageArc"
-                      d="M 116 192 A 124 28 0 0 0 364 192"
+                      d="M 106 152 A 99 24 0 0 0 304 152"
                     />
                   </defs>
                   <text
+                    className={`${styles.engageText} ${styles.engageHighlight}`}
+                  >
+                    <textPath
+                      href="#engageArc"
+                      startOffset="50%"
+                      textAnchor="middle"
+                    >
+                      ENGAGE
+                    </textPath>
+                  </text>
+                  <text
                     className={styles.engageText}
-                    fill="url(#engageGrad)"
+                    style={{ opacity: 0.92 }}
                   >
                     <textPath
                       href="#engageArc"
@@ -287,21 +338,16 @@ export function SaucerButton({ onEngage }: SaucerButtonProps) {
                   </text>
                 </svg>
               </button>
-
-              <div
-                ref={sUndersideRef}
-                className={styles.undersideVeil}
-              />
             </div>
           </div>
 
           <div ref={captionRef} className={styles.caption}>
-            Hover · tilt to reveal Triebwerk · click to charge
+            Hover the craft field · click to charge
           </div>
         </div>
 
         <div className={styles.panelNote}>
-          Haunebu Coanda Hull · Thule Triebwerk · Pass 2M
+          Haunebu Coanda Hull · Thule Triebwerk · Pass 2G
         </div>
       </section>
     </main>
