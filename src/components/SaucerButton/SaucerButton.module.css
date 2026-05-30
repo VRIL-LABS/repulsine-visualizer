@@ -57,7 +57,7 @@
   position: relative;
   width: min(100%, 840px);
   height: 700px;
-  perspective: 600px;
+  perspective: 1100px;
   overflow: visible;
   z-index: 2;
   display: grid;
@@ -184,7 +184,7 @@
 
 .tiltStage {
   position: relative;
-  width: 520px; height: 380px;
+  width: 540px; height: 390px;
   z-index: 5;
   display: grid;
   place-items: center;
@@ -192,7 +192,7 @@
 
 .tiltBody {
   position: relative;
-  width: 520px; height: 380px;
+  width: 540px; height: 390px;
   display: grid;
   place-items: center;
   transform: rotateX(0deg) rotateY(0deg);
@@ -203,8 +203,7 @@
 /* ─── Saucer Button ─── */
 .saucer {
   position: relative;
-  width: 410px; height: 240px;
-  pointer-events: none;
+  width: 430px; height: 252px;
   border: 0;
   background: none;
   padding: 0;
@@ -392,14 +391,16 @@
 /* Core glow */
 .sCore {
   left: 50%; top: 50%;
-  width: 76px; height: 76px;
+  width: 68px; height: 30px;
   border-radius: 50%;
-  transform: translate(-50%, -20%) translateZ(34px);
+  transform: translate(-50%, 18%) translateZ(31px);
   background:
-    radial-gradient(circle at 45% 38%, rgba(255,255,255,.98) 0 12%, rgba(255,255,255,.22) 22%, transparent 36%),
-    radial-gradient(circle, rgba(57,223,200,.9) 0, rgba(57,223,200,.28) 34%, rgba(255,194,92,.14) 58%, transparent 76%);
-  opacity: .08;
-  box-shadow: 0 0 8px rgba(57,223,200,.42), 0 0 14px rgba(255,255,255,.16);
+    radial-gradient(ellipse at 50% 52%, rgba(255,255,255,.36) 0 12%, rgba(57,223,200,.22) 25%, rgba(57,223,200,.04) 54%, transparent 72%),
+    linear-gradient(180deg, rgba(184,198,211,.3), rgba(112,128,142,.26));
+  opacity: 0;
+  box-shadow:
+    inset 0 5px 9px rgba(255,255,255,.28),
+    inset 0 -7px 10px rgba(74,91,106,.22);
   transition: opacity 640ms ease 280ms, box-shadow 640ms ease 280ms;
 }
 
@@ -479,8 +480,21 @@
 .scene[data-state="charge"] .sApertures { opacity: .9; }
 .scene[data-state="hover"] .sVeins { opacity: .18; }
 .scene[data-state="charge"] .sVeins { opacity: .92; }
-.scene[data-state="hover"] .sCore { opacity: .24; box-shadow: 0 0 14px rgba(57,223,200,.42), 0 0 22px rgba(255,255,255,.18); }
-.scene[data-state="charge"] .sCore { opacity: 1; box-shadow: 0 0 24px rgba(57,223,200,.52), 0 0 44px rgba(255,255,255,.28), 0 0 60px rgba(255,194,92,.14); }
+.scene[data-state="hover"] .sCore {
+  opacity: .32;
+  box-shadow:
+    inset 0 5px 9px rgba(255,255,255,.34),
+    inset 0 -7px 10px rgba(74,91,106,.2),
+    0 0 10px rgba(57,223,200,.2);
+}
+.scene[data-state="charge"] .sCore {
+  opacity: .88;
+  box-shadow:
+    inset 0 5px 9px rgba(255,255,255,.42),
+    inset 0 -7px 10px rgba(57,223,200,.18),
+    0 0 18px rgba(57,223,200,.38),
+    0 0 30px rgba(255,194,92,.12);
+}
 .scene[data-state="hover"] .sShine,
 .scene[data-state="charge"] .sShine { opacity: .82; }
 .scene[data-state="charge"] .sBursts {

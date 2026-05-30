@@ -10,6 +10,7 @@ interface DiscGeometryProps {
   autoRotate: boolean;
   onHover: (part: HoveredPart | null) => void;
   isDark: boolean;
+  isMobile?: boolean;
 }
 
 // Build hull profile points for the Repulsine aerodynamic shell (LatheGeometry)
@@ -35,7 +36,7 @@ function buildHullPoints(): THREE.Vector2[] {
 }
 
 // Build corrugated wave-disc geometry (sinusoidal troughs in a cylinder)
-function buildCorrugatedPlate(segments = 128): THREE.BufferGeometry {
+function buildCorrugatedPlate(segments: number): THREE.BufferGeometry {
   const geo = new THREE.CylinderGeometry(5.0, 5.0, 0.05, segments, 1);
   const pv = geo.attributes.position as THREE.BufferAttribute;
   for (let i = 0; i < pv.count; i++) {
@@ -58,6 +59,7 @@ export function RepulsineDisc({
   autoRotate,
   onHover,
   isDark,
+  isMobile = false,
 }: DiscGeometryProps) {
   const craftRef = useRef<THREE.Group>(null);
   const shellRef = useRef<THREE.Mesh>(null);
@@ -115,7 +117,18 @@ export function RepulsineDisc({
   );
 
   const hullPoints = useMemo(() => buildHullPoints(), []);
-  const corrugatedGeo = useMemo(() => buildCorrugatedPlate(), []);
+  const hullSegments = isMobile ? 40 : 64;
+  const torusSegments = isMobile ? 40 : 64;
+  const corrugatedGeo = useMemo(
+    () => buildCorrugatedPlate(isMobile ? 80 : 128),
+    [isMobile]
+  );
+
+  useEffect(() => {
+    return () => {
+      corrugatedGeo.dispose();
+    };
+  }, [corrugatedGeo]);
 
   // Track hovered object
   const hoveredRef = useRef<THREE.Object3D | null>(null);
@@ -256,12 +269,13 @@ export function RepulsineDisc({
 
   // Attach mousemove handler once via effect (not per-frame)
   useEffect(() => {
+    if (isMobile) return;
     const canvas = gl.domElement;
     canvas.addEventListener("mousemove", handlePointerMove);
     return () => {
       canvas.removeEventListener("mousemove", handlePointerMove);
     };
-  }, [gl.domElement, handlePointerMove]);
+  }, [gl.domElement, handlePointerMove, isMobile]);
 
   return (
     <group ref={craftRef} position={[0, 5, 0]}>
@@ -277,10 +291,10 @@ export function RepulsineDisc({
           v2: "14 m/s",
           l2: "Flow Rate",
         }}
-        castShadow
+        castShadow={!isMobile}
         onUpdate={(self) => setPartTarget(self, 3.5, 8.0)}
       >
-        <torusGeometry args={[1.6, 0.25, 16, 64]} />
+        <torusGeometry args={[1.6, 0.25, isMobile ? 10 : 16, torusSegments]} />
         <primitive object={copperMat} attach="material" />
       </mesh>
 
@@ -297,7 +311,7 @@ export function RepulsineDisc({
         }}
         onUpdate={(self) => setPartTarget(self, 0, 0)}
       >
-        <sphereGeometry args={[0.8, 32, 32]} />
+        <sphereGeometry args={[0.8, isMobile ? 20 : 32, isMobile ? 16 : 32]} />
         <primitive object={coreMat} attach="material" />
       </mesh>
 
@@ -312,14 +326,14 @@ export function RepulsineDisc({
           v2: "1.4 kg",
           l2: "Lift",
         }}
-        castShadow
+        castShadow={!isMobile}
         onUpdate={(self) => setPartTarget(self, 0, 4.5)}
       >
-        <latheGeometry args={[hullPoints, 64]} />
+        <latheGeometry args={[hullPoints, hullSegments]} />
         <primitive object={shellMat} attach="material" />
         {/* Wire overlay */}
         <mesh>
-          <latheGeometry args={[hullPoints, 64]} />
+          <latheGeometry args={[hullPoints, hullSegments]} />
           <meshBasicMaterial
             color={0x111111}
             wireframe
@@ -347,7 +361,7 @@ export function RepulsineDisc({
               v2: "Cycloidal",
               l2: "Flow Pattern",
             }}
-            castShadow
+            castShadow={!isMobile}
           >
             <primitive object={copperMat} attach="material" />
           </mesh>
@@ -359,8 +373,9 @@ export function RepulsineDisc({
         ref={pipeGroupRef}
         onUpdate={(self) => setPartTarget(self, 2.2, -6.0)}
       >
-        {Array.from({ length: 16 }, (_, i) => {
-          const angle = (i / 16) * Math.PI * 2;
+        {Array.from({ length: isMobile ? 10 : 16 }, (_, i) => {
+          const pipeCount = isMobile ? 10 : 16;
+          const angle = (i / pipeCount) * Math.PI * 2;
           const br = 0.35;
           return (
             <mesh
@@ -377,7 +392,7 @@ export function RepulsineDisc({
               }}
             >
               <torusGeometry
-                args={[4.4 + Math.cos(angle) * br, 0.04, 8, 64]}
+                args={[4.4 + Math.cos(angle) * br, 0.04, isMobile ? 6 : 8, torusSegments]}
               />
               <primitive object={copperMat} attach="material" />
             </mesh>

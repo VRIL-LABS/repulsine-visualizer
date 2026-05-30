@@ -21,11 +21,11 @@ const GUST_PARAMS = Array.from({ length: GUST_COUNT }, (_, i) => ({
 
 export function VortexParticles({ isDark, isMobile = false }: VortexParticlesProps) {
   const windGroupRef = useRef<THREE.Group>(null);
-  const gustCount = isMobile ? 12 : GUST_COUNT;
-  const pointsPerGust = isMobile ? 30 : POINTS_PER_GUST;
 
   // Build static gust geometry once — no CPU work per frame
   const gustLines = useMemo(() => {
+    const gustCount = isMobile ? 12 : GUST_COUNT;
+    const pointsPerGust = isMobile ? 30 : POINTS_PER_GUST;
     const lines: THREE.Line[] = [];
     const mat = new THREE.LineDashedMaterial({
       color: isDark ? 0x00ffff : 0x0f766e,
@@ -61,7 +61,7 @@ export function VortexParticles({ isDark, isMobile = false }: VortexParticlesPro
     }
 
     return lines;
-  }, [isDark, gustCount, pointsPerGust]);
+  }, [isDark, isMobile]);
 
   // Dispose GPU resources when theme changes or component unmounts
   useEffect(() => {

@@ -176,6 +176,14 @@ export function SaucerButton({ onEngage }: SaucerButtonProps) {
         forceRingRef.current.style.removeProperty("opacity");
         forceRingRef.current.style.removeProperty("filter");
       }
+      if (fieldShellRef.current) {
+        fieldShellRef.current.style.transform = "translate(-50%, -50%) scale(.01)";
+        fieldShellRef.current.style.opacity = "0";
+      }
+      if (bioHaloRef.current) {
+        bioHaloRef.current.style.transform = "translate(-50%, -50%) scale(.94)";
+        bioHaloRef.current.style.opacity = "0";
+      }
       if (captionRef.current) {
         captionRef.current.textContent = "Hover · tilt toward top to reveal Triebwerk · click to charge";
       }

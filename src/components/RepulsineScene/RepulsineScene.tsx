@@ -128,16 +128,16 @@ export function RepulsineScene({ onBack }: RepulsineSceneProps) {
         gl={{
           antialias: !isMobile,
           alpha: false,
-          powerPreference: "high-performance",
-          // Reduce render buffer precision on mobile to save VRAM
+          powerPreference: isMobile ? "low-power" : "high-performance",
+          // Keep depth occlusion; disable stencil on mobile to save VRAM
           ...(isMobile ? { depth: true, stencil: false } : {}),
         }}
+        // Lock mobile DPR to 1 to reduce iPad Safari GPU memory pressure
+        dpr={isMobile ? 1 : [1, 2]}
         camera={{ position: [0, 18, 45], fov: 40 }}
         shadows={!isMobile}
         style={{ position: "absolute", inset: 0 }}
         onCreated={({ gl }) => {
-          // Cap pixel ratio: 1.5 on mobile (prevents iPad GPU OOM), 2 on desktop
-          gl.setPixelRatio(Math.min(window.devicePixelRatio, isMobile ? 1.5 : 2));
           if (!isMobile) {
             gl.shadowMap.enabled = true;
             gl.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -148,12 +148,13 @@ export function RepulsineScene({ onBack }: RepulsineSceneProps) {
         <fogExp2 attach="fog" args={[bgColor, 0.022]} />
 
         <Suspense fallback={null}>
-          <Environment isDark={isDark} />
+          <Environment isDark={isDark} isMobile={isMobile} />
           <RepulsineDisc
             isExploded={isExploded}
             autoRotate={autoRotate}
             onHover={setHoveredPart}
             isDark={isDark}
+            isMobile={isMobile}
           />
           <VortexParticles isDark={isDark} isMobile={isMobile} />
 
@@ -182,7 +183,7 @@ export function RepulsineScene({ onBack }: RepulsineSceneProps) {
           dampingFactor={0.05}
           minDistance={15}
           maxDistance={80}
-          maxPolarAngle={Math.PI * 0.85}
+          maxPolarAngle={Math.PI * 0.62}
         />
       </Canvas>
 
