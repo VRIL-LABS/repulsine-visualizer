@@ -223,11 +223,27 @@ export function SaucerButton({ onEngage }: SaucerButtonProps) {
       if (!chargingRef.current && chargeLevelRef.current < 0.02)
         setSceneState("hover");
     };
-    const handlePointerMove = (e: PointerEvent) => {
-      applyTilt(e);
-      if (!chargingRef.current && chargeLevelRef.current < 0.02)
-        setSceneState("hover");
+
+    // RAF-throttled pointer move — ensures at most one tilt recalculation
+    // per frame, eliminating jank from high-frequency pointer events.
+    let moveRafId: number | null = null;
+    let lastMoveEvent: PointerEvent | null = null;
+    const flushMove = () => {
+      moveRafId = null;
+      if (lastMoveEvent) {
+        applyTilt(lastMoveEvent);
+        if (!chargingRef.current && chargeLevelRef.current < 0.02)
+          setSceneState("hover");
+        lastMoveEvent = null;
+      }
     };
+    const handlePointerMove = (e: PointerEvent) => {
+      lastMoveEvent = e;
+      if (moveRafId === null) {
+        moveRafId = requestAnimationFrame(flushMove);
+      }
+    };
+
     const handlePointerLeave = () => {
       resetTilt();
       if (!chargingRef.current) stopCharge();
@@ -254,6 +270,7 @@ export function SaucerButton({ onEngage }: SaucerButtonProps) {
       scene.removeEventListener("pointermove", handlePointerMove);
       scene.removeEventListener("pointerleave", handlePointerLeave);
       scene.removeEventListener("click", handleClick);
+      if (moveRafId !== null) cancelAnimationFrame(moveRafId);
       if (rafIdRef.current) cancelAnimationFrame(rafIdRef.current);
     };
   }, [applyTilt, resetTilt, startCharge, stopCharge]);

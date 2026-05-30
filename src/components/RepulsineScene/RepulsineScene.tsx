@@ -10,6 +10,7 @@ import { Environment } from "./Environment";
 import { RepulsineDisc } from "./DiscGeometry";
 import { VortexParticles } from "./VortexParticles";
 import { TelemetryUI } from "./TelemetryUI";
+import { CycloidalVortexWidget } from "./CycloidalVortexWidget";
 import type { HoveredPart } from "./types";
 
 interface RepulsineSceneProps {
@@ -145,7 +146,7 @@ export function RepulsineScene({ onBack }: RepulsineSceneProps) {
         }}
       >
         <color attach="background" args={[bgColor]} />
-        <fogExp2 attach="fog" args={[bgColor, 0.022]} />
+        <fogExp2 attach="fog" args={[bgColor, isDark ? 0.016 : 0.022]} />
 
         <Suspense fallback={null}>
           <Environment isDark={isDark} isMobile={isMobile} />
@@ -158,14 +159,29 @@ export function RepulsineScene({ onBack }: RepulsineSceneProps) {
           />
           <VortexParticles isDark={isDark} isMobile={isMobile} />
 
+          {/* Volumetric light cone — faux godray from ceiling hatch */}
+          {isDark && (
+            <mesh position={[0, 36, 0]}>
+              <coneGeometry args={[18, 68, isMobile ? 16 : 32, 1, true]} />
+              <meshBasicMaterial
+                color={0xb8d4e8}
+                transparent
+                opacity={0.035}
+                side={THREE.DoubleSide}
+                blending={THREE.AdditiveBlending}
+                depthWrite={false}
+              />
+            </mesh>
+          )}
+
           {/* Post-processing: disabled on mobile to prevent Safari GPU crash */}
           {!isMobile && (
             <EffectComposer>
               <Bloom
-                luminanceThreshold={isDark ? 0.55 : 0.75}
-                luminanceSmoothing={0.3}
-                intensity={isDark ? 1.6 : 0.7}
-                radius={0.85}
+                luminanceThreshold={isDark ? 0.4 : 0.75}
+                luminanceSmoothing={0.35}
+                intensity={isDark ? 2.2 : 0.7}
+                radius={0.9}
                 blendFunction={BlendFunction.ADD}
               />
               <ChromaticAberration
@@ -199,6 +215,9 @@ export function RepulsineScene({ onBack }: RepulsineSceneProps) {
         onCycleTheme={cycleTheme}
         isDark={isDark}
       />
+
+      {/* Cycloidal Vortex Verification widget */}
+      <CycloidalVortexWidget isDark={isDark} />
     </div>
   );
 }
