@@ -384,8 +384,8 @@ export function RepulsineDisc({
               position={[0, Math.sin(angle) * br, 0]}
               userData={{
                 name: "Capillary Whorl",
-                desc: "Dense bundle of 16 copper tubes wrapping the chamber in centripetal vector.",
-                v1: "16",
+                desc: `Dense bundle of ${pipeCount} copper tubes wrapping the chamber in centripetal vector.`,
+                v1: String(pipeCount),
                 l1: "Tube Count",
                 v2: "Centripetal",
                 l2: "Flow Vector",
