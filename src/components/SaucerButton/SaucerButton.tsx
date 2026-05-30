@@ -30,12 +30,17 @@ export function SaucerButton({ onEngage }: SaucerButtonProps) {
   const updateUnderside = useCallback(() => {
     const scene = sceneRef.current;
     if (!scene) return;
-    const bf = Math.min(1, Math.max(0, -lastRotXRef.current / 18));
+    const bf = Math.min(1, Math.max(0, -lastRotXRef.current / 15));
     const cf = chargeLevelRef.current * 0.52;
     const u = Math.max(bf, cf);
     scene.dataset.back = u > 0.1 ? "1" : "0";
     scene.style.setProperty("--underside-opacity", u.toFixed(3));
   }, []);
+
+  // Base X-axis rotation angle (degrees) — makes the circular disc appear as
+  // a foreshortened oval when at rest, like viewing a disc from slightly above.
+  // cos(52°) ≈ 0.616 → a 410px circle appears ~252px tall — authentic 3D disc.
+  const BASE_TILT_X = 52;
 
   const applyTilt = useCallback(
     (e: PointerEvent) => {
@@ -51,8 +56,8 @@ export function SaucerButton({ onEngage }: SaucerButtonProps) {
       const ny = Math.min(1, Math.max(-1, (e.clientY - cy) / (r.height / 2)));
 
       lastRotYRef.current = nx * 18;
-      lastRotXRef.current = ny * 20;
-      tiltBody.style.transform = `rotateX(${lastRotXRef.current.toFixed(2)}deg) rotateY(${lastRotYRef.current.toFixed(2)}deg)`;
+      lastRotXRef.current = ny * 15;
+      tiltBody.style.transform = `rotateX(${(BASE_TILT_X + lastRotXRef.current).toFixed(2)}deg) rotateY(${lastRotYRef.current.toFixed(2)}deg)`;
 
       // Specular shine follows cursor
       const mx = ((e.clientX - r.left) / r.width) * 100;
@@ -70,7 +75,7 @@ export function SaucerButton({ onEngage }: SaucerButtonProps) {
     lastRotXRef.current = 0;
     lastRotYRef.current = 0;
     if (tiltBodyRef.current)
-      tiltBodyRef.current.style.transform = "rotateX(0deg) rotateY(0deg)";
+      tiltBodyRef.current.style.transform = `rotateX(${BASE_TILT_X}deg) rotateY(0deg)`;
     if (saucerRef.current) {
       saucerRef.current.style.setProperty("--mx", "50%");
       saucerRef.current.style.setProperty("--my", "50%");
@@ -314,7 +319,7 @@ export function SaucerButton({ onEngage }: SaucerButtonProps) {
                 <div className={styles.sBursts} />
                 <svg
                   className={styles.engageSvg}
-                  viewBox="0 0 410 240"
+                  viewBox="0 0 410 410"
                   aria-hidden="true"
                 >
                   <defs>
@@ -331,7 +336,7 @@ export function SaucerButton({ onEngage }: SaucerButtonProps) {
                     </radialGradient>
                     <path
                       id="engageArc"
-                      d="M 106 152 A 99 24 0 0 0 304 152"
+                      d="M 125 270 A 130 130 0 0 0 285 270"
                     />
                   </defs>
                   <text

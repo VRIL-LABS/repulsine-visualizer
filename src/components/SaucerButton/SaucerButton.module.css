@@ -184,7 +184,7 @@
 
 .tiltStage {
   position: relative;
-  width: 540px; height: 390px;
+  width: 540px; height: 540px;
   z-index: 5;
   display: grid;
   place-items: center;
@@ -192,10 +192,10 @@
 
 .tiltBody {
   position: relative;
-  width: 540px; height: 390px;
+  width: 540px; height: 540px;
   display: grid;
   place-items: center;
-  transform: rotateX(0deg) rotateY(0deg);
+  transform: rotateX(52deg) rotateY(0deg);
   transition: transform 120ms linear;
   will-change: transform;
 }
@@ -203,10 +203,11 @@
 /* ─── Saucer Button ─── */
 .saucer {
   position: relative;
-  width: 430px; height: 252px;
+  width: 410px; height: 410px;
   border: 0;
   background: none;
   padding: 0;
+  border-radius: 50%;
   transform: translateY(0px);
   transform-style: preserve-3d;
   transition: transform 800ms cubic-bezier(.16,1,.3,1);
@@ -229,7 +230,7 @@
 
 /* UNDERSIDE — propulsion, Thule vortex dynamo, revealed on back-tilt or charge */
 .sUnderside {
-  left: 80px; right: 80px; bottom: 28px; height: 82px;
+  inset: 60px;
   border-radius: 50%;
   background:
     radial-gradient(circle at 50% 64%, rgba(57,223,200,.98) 0 4%, rgba(57,223,200,.64) 10%, rgba(57,223,200,.22) 24%, rgba(57,223,200,.05) 42%, transparent 58%),
@@ -244,7 +245,7 @@
     radial-gradient(circle at 50% 64%, transparent 34%, rgba(57,223,200,.3) 38%, rgba(57,223,200,.08) 46%, transparent 54%);
   -webkit-mask: radial-gradient(ellipse at 50% 50%, black 48%, transparent 52%);
   mask: radial-gradient(ellipse at 50% 50%, black 48%, transparent 52%);
-  transform: translateZ(-12px) scaleY(.72);
+  transform: translateZ(-12px);
   opacity: var(--underside-opacity, 0);
   box-shadow: 0 0 14px rgba(57,223,200,.42), 0 0 28px rgba(57,223,200,.18);
   transition: opacity 260ms ease, box-shadow 260ms ease;
@@ -256,7 +257,7 @@
 
 /* HULL TOP */
 .sMain {
-  inset: 16px 8px 42px;
+  inset: 20px;
   border-radius: 50%;
   background:
     radial-gradient(circle at 30% 22%, rgba(255,255,255,.98) 0 6%, rgba(255,255,255,.18) 14%, transparent 28%),
@@ -272,7 +273,7 @@
 .sMain::before {
   content: "";
   position: absolute;
-  inset: 14px 16px 18px;
+  inset: 16px;
   border-radius: 50%;
   background:
     linear-gradient(180deg, rgba(255,255,255,.28), rgba(255,255,255,.04)),
@@ -283,34 +284,34 @@
 
 /* Belly */
 .sBelly {
-  left: 80px; right: 80px; bottom: 46px; height: 54px;
+  inset: 60px;
   border-radius: 50%;
   background: linear-gradient(180deg, rgba(219,228,236,.62), rgba(196,207,218,.92));
   box-shadow: inset 0 10px 12px rgba(255,255,255,.34), inset 0 -10px 12px rgba(157,171,185,.24);
-  transform: translateZ(0px) scaleY(.82);
+  transform: translateZ(-2px);
   opacity: .98;
 }
 
 /* Rim */
 .sRim {
-  inset: 38px 50px 58px;
+  inset: 40px;
   border-radius: 50%;
   background: linear-gradient(145deg, rgba(255,255,255,.72), rgba(212,221,230,.62));
-  -webkit-mask: radial-gradient(circle, transparent 58%, black 63%, black 72%, transparent 77%);
-  mask: radial-gradient(circle, transparent 58%, black 63%, black 72%, transparent 77%);
+  -webkit-mask: radial-gradient(circle, transparent 82%, black 86%, black 92%, transparent 96%);
+  mask: radial-gradient(circle, transparent 82%, black 86%, black 92%, transparent 96%);
   box-shadow: inset -8px -8px 10px rgba(255,255,255,.5), inset 8px 10px 10px rgba(181,195,209,.18);
   transform: translateZ(18px);
 }
 
 /* Orbital ring A */
 .sRingA {
-  inset: 58px 74px 72px;
+  inset: 50px;
   border-radius: 50%;
   background: conic-gradient(from 90deg,
     rgba(255,255,255,.28), rgba(255,255,255,.06),
     rgba(57,223,200,.16), rgba(255,194,92,.22), rgba(255,255,255,.28));
-  -webkit-mask: radial-gradient(circle, transparent 56%, black 61%, black 67%, transparent 72%);
-  mask: radial-gradient(circle, transparent 56%, black 61%, black 67%, transparent 72%);
+  -webkit-mask: radial-gradient(circle, transparent 72%, black 76%, black 82%, transparent 86%);
+  mask: radial-gradient(circle, transparent 72%, black 76%, black 82%, transparent 86%);
   opacity: .06;
   transform: translateZ(22px) rotate(0deg);
   transition: opacity 420ms ease, transform 520ms cubic-bezier(.16,1,.3,1);
@@ -319,14 +320,14 @@
 
 /* Orbital ring B */
 .sRingB {
-  inset: 86px 110px 96px;
+  inset: 70px;
   border-radius: 50%;
   background: conic-gradient(from 28deg,
     rgba(255,255,255,.24), rgba(255,255,255,0),
     rgba(255,194,92,.3), rgba(255,255,255,0),
     rgba(57,223,200,.32), rgba(255,255,255,.24));
-  -webkit-mask: radial-gradient(circle, transparent 48%, black 54%, black 60%, transparent 65%);
-  mask: radial-gradient(circle, transparent 48%, black 54%, black 60%, transparent 65%);
+  -webkit-mask: radial-gradient(circle, transparent 64%, black 68%, black 74%, transparent 78%);
+  mask: radial-gradient(circle, transparent 64%, black 68%, black 74%, transparent 78%);
   opacity: .02;
   transform: translateZ(26px) rotate(0deg);
   transition: opacity 520ms ease 90ms, transform 620ms cubic-bezier(.16,1,.3,1) 90ms;
@@ -335,7 +336,7 @@
 
 /* Seam lines */
 .sSeams {
-  inset: 68px 88px 82px;
+  inset: 55px;
   border-radius: 50%;
   background: conic-gradient(from 16deg,
     transparent 0deg 18deg, rgba(147,160,174,.34) 18deg 20deg,
@@ -344,15 +345,15 @@
     transparent 150deg 218deg, rgba(147,160,174,.26) 218deg 220deg,
     transparent 220deg 288deg, rgba(147,160,174,.24) 288deg 290deg,
     transparent 290deg 360deg);
-  -webkit-mask: radial-gradient(circle, transparent 52%, black 58%, black 66%, transparent 71%);
-  mask: radial-gradient(circle, transparent 52%, black 58%, black 66%, transparent 71%);
+  -webkit-mask: radial-gradient(circle, transparent 68%, black 72%, black 80%, transparent 84%);
+  mask: radial-gradient(circle, transparent 68%, black 72%, black 80%, transparent 84%);
   opacity: .18;
   transform: translateZ(23px);
 }
 
 /* Aperture vents */
 .sApertures {
-  inset: 100px 124px 108px;
+  inset: 80px;
   border-radius: 50%;
   background: conic-gradient(from 10deg,
     transparent 0deg 22deg, rgba(57,223,200,.44) 22deg 30deg,
@@ -360,8 +361,8 @@
     transparent 106deg 178deg, rgba(57,223,200,.38) 178deg 186deg,
     transparent 186deg 254deg, rgba(255,194,92,.32) 254deg 262deg,
     transparent 262deg 360deg);
-  -webkit-mask: radial-gradient(circle, transparent 38%, black 46%, black 54%, transparent 61%);
-  mask: radial-gradient(circle, transparent 38%, black 46%, black 54%, transparent 61%);
+  -webkit-mask: radial-gradient(circle, transparent 50%, black 56%, black 64%, transparent 70%);
+  mask: radial-gradient(circle, transparent 50%, black 56%, black 64%, transparent 70%);
   opacity: 0;
   transform: translateZ(30px);
   transition: opacity 580ms ease 180ms;
@@ -370,7 +371,7 @@
 
 /* Bioluminescent veins */
 .sVeins {
-  inset: 54px 70px 68px;
+  inset: 45px;
   border-radius: 50%;
   opacity: .02;
   background:
@@ -391,9 +392,9 @@
 /* Core glow */
 .sCore {
   left: 50%; top: 50%;
-  width: 68px; height: 30px;
+  width: 68px; height: 68px;
   border-radius: 50%;
-  transform: translate(-50%, 18%) translateZ(31px);
+  transform: translate(-50%, -50%) translateZ(31px);
   background:
     radial-gradient(ellipse at 50% 52%, rgba(255,255,255,.36) 0 12%, rgba(57,223,200,.22) 25%, rgba(57,223,200,.04) 54%, transparent 72%),
     linear-gradient(180deg, rgba(184,198,211,.3), rgba(112,128,142,.26));
@@ -406,7 +407,7 @@
 
 /* Specular highlight */
 .sShine {
-  inset: 32px 32px 52px;
+  inset: 24px;
   border-radius: 50%;
   background:
     radial-gradient(circle at var(--mx, 50%) var(--my, 50%), rgba(255,255,255,.84) 0 5%, rgba(255,255,255,.16) 14%, rgba(255,255,255,0) 28%),
@@ -435,8 +436,9 @@
 /* ENGAGE SVG */
 .engageSvg {
   inset: 0;
+  width: 100%; height: 100%;
   opacity: .08;
-  transform: translateY(5px) translateZ(40px);
+  transform: translateZ(40px);
   transition: opacity 420ms ease, transform 520ms cubic-bezier(.16,1,.3,1), filter 520ms ease;
 }
 
@@ -506,7 +508,7 @@
   opacity: .92;
 }
 .scene[data-state="hover"] .engageSvg,
-.scene[data-state="charge"] .engageSvg { opacity: 1; transform: translateY(3px) translateZ(40px); }
+.scene[data-state="charge"] .engageSvg { opacity: 1; transform: translateZ(40px); }
 .scene[data-state="charge"] .engageSvg {
   filter: drop-shadow(0 0 6px rgba(255,255,255,.48)) drop-shadow(0 0 22px rgba(255,255,255,.36));
 }
