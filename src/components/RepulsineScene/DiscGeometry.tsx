@@ -277,6 +277,8 @@ export function RepulsineDisc({
     };
   }, [gl.domElement, handlePointerMove, isMobile]);
 
+  const pipeCount = isMobile ? 10 : 16;
+
   return (
     <group ref={craftRef} position={[0, 5, 0]}>
       {/* Intake cowl */}
@@ -373,8 +375,7 @@ export function RepulsineDisc({
         ref={pipeGroupRef}
         onUpdate={(self) => setPartTarget(self, 2.2, -6.0)}
       >
-        {Array.from({ length: isMobile ? 10 : 16 }, (_, i) => {
-          const pipeCount = isMobile ? 10 : 16;
+        {Array.from({ length: pipeCount }, (_, i) => {
           const angle = (i / pipeCount) * Math.PI * 2;
           const br = 0.35;
           return (
