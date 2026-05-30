@@ -119,6 +119,7 @@ export function RepulsineDisc({
   const hullPoints = useMemo(() => buildHullPoints(), []);
   const hullSegments = isMobile ? 40 : 64;
   const torusSegments = isMobile ? 40 : 64;
+  const pipeCount = isMobile ? 10 : 16;
   const corrugatedGeo = useMemo(
     () => buildCorrugatedPlate(isMobile ? 80 : 128),
     [isMobile]
@@ -276,8 +277,6 @@ export function RepulsineDisc({
       canvas.removeEventListener("mousemove", handlePointerMove);
     };
   }, [gl.domElement, handlePointerMove, isMobile]);
-
-  const pipeCount = isMobile ? 10 : 16;
 
   return (
     <group ref={craftRef} position={[0, 5, 0]}>
