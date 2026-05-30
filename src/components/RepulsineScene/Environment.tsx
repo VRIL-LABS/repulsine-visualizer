@@ -6,9 +6,10 @@ import { useFrame } from "@react-three/fiber";
 
 interface EnvironmentProps {
   isDark: boolean;
+  isMobile?: boolean;
 }
 
-export function Environment({ isDark }: EnvironmentProps) {
+export function Environment({ isDark, isMobile = false }: EnvironmentProps) {
   const bunkerPoints = [
     new THREE.Vector2(0, -5),
     new THREE.Vector2(40, -5),
@@ -33,10 +34,12 @@ export function Environment({ isDark }: EnvironmentProps) {
     });
 
     const lines: THREE.Line[] = [];
-    for (let i = 0; i < 6; i++) {
+    const ringCount = isMobile ? 4 : 6;
+    const pointCount = isMobile ? 40 : 64;
+    for (let i = 0; i < ringCount; i++) {
       const r = 5 + i * 6;
       const curve = new THREE.EllipseCurve(0, 0, r, r, 0, Math.PI * 2, false, 0);
-      const points = curve.getPoints(64);
+      const points = curve.getPoints(pointCount);
       const geo = new THREE.BufferGeometry().setFromPoints(points);
       const line = new THREE.Line(geo, mat);
       line.computeLineDistances();
@@ -45,7 +48,7 @@ export function Environment({ isDark }: EnvironmentProps) {
       lines.push(line);
     }
     return { ringLines: lines, ringMat: mat };
-  }, [ringColor]);
+  }, [isMobile, ringColor]);
 
   // Dispose GPU resources when replaced or unmounted
   useEffect(() => {
@@ -66,8 +69,8 @@ export function Environment({ isDark }: EnvironmentProps) {
   return (
     <group>
       {/* Bunker walls */}
-      <mesh receiveShadow>
-        <latheGeometry args={[bunkerPoints, 32]} />
+      <mesh receiveShadow={!isMobile}>
+        <latheGeometry args={[bunkerPoints, isMobile ? 20 : 32]} />
         <meshStandardMaterial
           color={industrialColor}
           roughness={0.9}
@@ -77,7 +80,7 @@ export function Environment({ isDark }: EnvironmentProps) {
       </mesh>
 
       {/* Floor */}
-      <mesh receiveShadow rotation={[-Math.PI / 2, 0, 0]} position={[0, -4.9, 0]}>
+      <mesh receiveShadow={!isMobile} rotation={[-Math.PI / 2, 0, 0]} position={[0, -4.9, 0]}>
         <planeGeometry args={[80, 80]} />
         <meshStandardMaterial
           color={isDark ? 0x0a0d10 : 0xc8d5e2}
@@ -102,8 +105,8 @@ export function Environment({ isDark }: EnvironmentProps) {
         penumbra={0.8}
         decay={1}
         distance={100}
-        castShadow
-        shadow-mapSize={[1024, 1024]}
+        castShadow={!isMobile}
+        shadow-mapSize={[isMobile ? 512 : 1024, isMobile ? 512 : 1024]}
       />
       <pointLight
         position={[-20, 10, -20]}
