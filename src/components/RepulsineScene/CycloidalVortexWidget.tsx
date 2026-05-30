@@ -16,6 +16,13 @@ interface CycloidalVortexWidgetProps {
  *   P(r) = P_∞ − ρΓ² / (8π²r²)  — Bernoulli pressure in vortex
  *   T(r) = T_∞ − (v² / 2cₚ)  — adiabatic cooling in centripetal flow
  */
+
+// Physical constants — stable across renders, kept outside the component
+const GAMMA = 12.0; // circulation strength (m²/s)
+const RHO = 1.225; // air density (kg/m³)
+const CP = 1005; // specific heat capacity (J/kg·K)
+const R_CORE = 0.08; // core radius (m)
+
 export function CycloidalVortexWidget({ isDark }: CycloidalVortexWidgetProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rafRef = useRef<number>(0);
@@ -41,12 +48,6 @@ export function CycloidalVortexWidget({ isDark }: CycloidalVortexWidgetProps) {
     phase: 0,
     lastDisplayUpdate: 0,
   });
-
-  // Physical constants for the simulation
-  const GAMMA = 12.0; // circulation strength (m²/s)
-  const RHO = 1.225; // air density (kg/m³)
-  const CP = 1005; // specific heat capacity (J/kg·K)
-  const R_CORE = 0.08; // core radius (m)
 
   const accent = isDark ? "#0f766e" : "#0b5c56";
   const accentLight = isDark ? "rgba(15,118,110,0.15)" : "rgba(11,92,86,0.1)";
@@ -214,7 +215,7 @@ export function CycloidalVortexWidget({ isDark }: CycloidalVortexWidgetProps) {
 
     rafRef.current = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(rafRef.current);
-  }, [isDark, isExpanded, drawVortex, GAMMA, RHO, CP, R_CORE]);
+  }, [isDark, isExpanded, drawVortex, setTelemetry]);
 
   const telemetryItems = [
     {
