@@ -273,7 +273,7 @@
 .sMain::before {
   content: "";
   position: absolute;
-  inset: 14px 16px 18px;
+  inset: 16px;
   border-radius: 50%;
   background:
     linear-gradient(180deg, rgba(255,255,255,.28), rgba(255,255,255,.04)),

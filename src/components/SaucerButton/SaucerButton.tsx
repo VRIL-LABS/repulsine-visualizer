@@ -30,7 +30,7 @@ export function SaucerButton({ onEngage }: SaucerButtonProps) {
   const updateUnderside = useCallback(() => {
     const scene = sceneRef.current;
     if (!scene) return;
-    const bf = Math.min(1, Math.max(0, -lastRotXRef.current / 18));
+    const bf = Math.min(1, Math.max(0, -lastRotXRef.current / 15));
     const cf = chargeLevelRef.current * 0.52;
     const u = Math.max(bf, cf);
     scene.dataset.back = u > 0.1 ? "1" : "0";
