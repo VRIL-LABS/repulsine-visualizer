@@ -160,8 +160,15 @@ export function Environment({ isDark, isMobile = false }: EnvironmentProps) {
 
       {/* ─── Lighting: volumetric underground DUMB-room ─── */}
 
-      {/* Low ambient — deep underground, minimal fill */}
-      <ambientLight intensity={isDark ? 0.08 : 0.5} />
+      {/* Low ambient — deep underground, minimal fill (boosted for older GPUs) */}
+      <ambientLight intensity={isDark ? 0.35 : 0.6} />
+
+      {/* Directional fill light — ensures geometry is always visible regardless of GPU */}
+      <directionalLight
+        position={[5, 30, 10]}
+        intensity={isDark ? 0.6 : 0.3}
+        color={isDark ? 0xc8d8e8 : 0xffffff}
+      />
 
       {/* Primary overhead spot — cold white, simulates ceiling hatch downlight */}
       <spotLight
@@ -221,7 +228,7 @@ export function Environment({ isDark, isMobile = false }: EnvironmentProps) {
       <hemisphereLight
         color={isDark ? 0x1a2a3a : 0xf0f4f8}
         groundColor={isDark ? 0x060a0e : 0xd0d8e0}
-        intensity={isDark ? 0.25 : 0.4}
+        intensity={isDark ? 0.5 : 0.4}
       />
     </group>
   );

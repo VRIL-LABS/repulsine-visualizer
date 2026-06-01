@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useRef, useState, useEffect, useMemo } from "react";
+import { Suspense, useRef, useState, useEffect, useMemo, useCallback } from "react";
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
 import { EffectComposer, Bloom, ChromaticAberration } from "@react-three/postprocessing";
@@ -11,7 +11,9 @@ import { RepulsineDisc } from "./DiscGeometry";
 import { VortexParticles } from "./VortexParticles";
 import { TelemetryUI } from "./TelemetryUI";
 import { CycloidalVortexWidget } from "./CycloidalVortexWidget";
+import { SceneControls } from "./SceneControls";
 import type { HoveredPart } from "./types";
+import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 
 interface RepulsineSceneProps {
   onBack: () => void;
@@ -41,6 +43,10 @@ function isMobileDevice(): boolean {
 // Stable offset vector – avoids re-creating a new object every render
 const CHROMATIC_OFFSET = new THREE.Vector2(0.0018, 0.0018);
 
+// Default camera state for reset
+const DEFAULT_CAMERA_POSITION = new THREE.Vector3(0, 18, 45);
+const DEFAULT_TARGET = new THREE.Vector3(0, 0, 0);
+
 export function RepulsineScene({ onBack }: RepulsineSceneProps) {
   const [autoRotate, setAutoRotate] = useState(true);
   const [isExploded, setIsExploded] = useState(false);
@@ -49,6 +55,9 @@ export function RepulsineScene({ onBack }: RepulsineSceneProps) {
   const [webglSupported] = useState<boolean>(() =>
     typeof window !== "undefined" ? isWebGLAvailable() : true
   );
+  const [azimuthAngle, setAzimuthAngle] = useState(0);
+  const [zoomPercent, setZoomPercent] = useState(0);
+  const controlsRef = useRef<OrbitControlsImpl>(null);
   const isMobile = useMemo(() => isMobileDevice(), []);
   const themes: Array<"auto" | "dark" | "light"> = ["dark", "light", "auto"];
   const themeIdx = useRef(0);
@@ -65,6 +74,27 @@ export function RepulsineScene({ onBack }: RepulsineSceneProps) {
     themeIdx.current = (themeIdx.current + 1) % themes.length;
     setTheme(themes[themeIdx.current]);
   };
+
+  const handleResetView = useCallback(() => {
+    const controls = controlsRef.current;
+    if (!controls) return;
+    controls.target.copy(DEFAULT_TARGET);
+    controls.object.position.copy(DEFAULT_CAMERA_POSITION);
+    controls.update();
+  }, []);
+
+  const handleControlsChange = useCallback(() => {
+    const controls = controlsRef.current;
+    if (!controls) return;
+    // Azimuth angle (horizontal rotation) in radians
+    setAzimuthAngle(controls.getAzimuthalAngle());
+    // Zoom percentage: 0% at maxDistance, 100% at minDistance
+    const dist = controls.object.position.distanceTo(controls.target);
+    const min = controls.minDistance;
+    const max = controls.maxDistance;
+    const pct = Math.round(((max - dist) / (max - min)) * 100);
+    setZoomPercent(Math.max(0, Math.min(100, pct)));
+  }, []);
 
   // Prevent scroll on this page
   useEffect(() => {
@@ -132,10 +162,12 @@ export function RepulsineScene({ onBack }: RepulsineSceneProps) {
           powerPreference: isMobile ? "low-power" : "high-performance",
           // Keep depth occlusion; disable stencil on mobile to save VRAM
           ...(isMobile ? { depth: true, stencil: false } : {}),
+          toneMapping: THREE.ACESFilmicToneMapping,
+          toneMappingExposure: 1.8,
         }}
         // Lock mobile DPR to 1 to reduce iPad Safari GPU memory pressure
         dpr={isMobile ? 1 : [1, 2]}
-        camera={{ position: [0, 18, 45], fov: 40 }}
+        camera={{ position: [0, 18, 45], fov: 40, near: 0.5, far: 500 }}
         shadows={!isMobile}
         style={{ position: "absolute", inset: 0 }}
         onCreated={({ gl }) => {
@@ -195,11 +227,15 @@ export function RepulsineScene({ onBack }: RepulsineSceneProps) {
         </Suspense>
 
         <OrbitControls
+          ref={controlsRef}
           enableDamping
           dampingFactor={0.05}
           minDistance={15}
-          maxDistance={80}
+          maxDistance={55}
           maxPolarAngle={Math.PI * 0.62}
+          minPolarAngle={Math.PI * 0.15}
+          enablePan={false}
+          onChange={handleControlsChange}
         />
       </Canvas>
 
@@ -218,6 +254,14 @@ export function RepulsineScene({ onBack }: RepulsineSceneProps) {
 
       {/* Cycloidal Vortex Verification widget */}
       <CycloidalVortexWidget isDark={isDark} />
+
+      {/* Scene Controls: Reset View & Compass/Zoom */}
+      <SceneControls
+        isDark={isDark}
+        azimuthAngle={azimuthAngle}
+        zoomPercent={zoomPercent}
+        onResetView={handleResetView}
+      />
     </div>
   );
 }
