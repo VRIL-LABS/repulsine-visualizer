@@ -55,8 +55,6 @@ export function RepulsineScene({ onBack }: RepulsineSceneProps) {
   const [webglSupported] = useState<boolean>(() =>
     typeof window !== "undefined" ? isWebGLAvailable() : true
   );
-  const [azimuthAngle, setAzimuthAngle] = useState(0);
-  const [zoomPercent, setZoomPercent] = useState(0);
   const controlsRef = useRef<OrbitControlsImpl>(null);
   const isMobile = useMemo(() => isMobileDevice(), []);
   const themes: Array<"auto" | "dark" | "light"> = ["dark", "light", "auto"];
@@ -81,19 +79,6 @@ export function RepulsineScene({ onBack }: RepulsineSceneProps) {
     controls.target.copy(DEFAULT_TARGET);
     controls.object.position.copy(DEFAULT_CAMERA_POSITION);
     controls.update();
-  }, []);
-
-  const handleControlsChange = useCallback(() => {
-    const controls = controlsRef.current;
-    if (!controls) return;
-    // Azimuth angle (horizontal rotation) in radians
-    setAzimuthAngle(controls.getAzimuthalAngle());
-    // Zoom percentage: 0% at maxDistance, 100% at minDistance
-    const dist = controls.object.position.distanceTo(controls.target);
-    const min = controls.minDistance;
-    const max = controls.maxDistance;
-    const pct = Math.round(((max - dist) / (max - min)) * 100);
-    setZoomPercent(Math.max(0, Math.min(100, pct)));
   }, []);
 
   // Prevent scroll on this page
@@ -163,7 +148,7 @@ export function RepulsineScene({ onBack }: RepulsineSceneProps) {
           // Keep depth occlusion; disable stencil on mobile to save VRAM
           ...(isMobile ? { depth: true, stencil: false } : {}),
           toneMapping: THREE.ACESFilmicToneMapping,
-          toneMappingExposure: 1.8,
+          toneMappingExposure: 2.0,
         }}
         // Lock mobile DPR to 1 to reduce iPad Safari GPU memory pressure
         dpr={isMobile ? 1 : [1, 2]}
@@ -178,7 +163,7 @@ export function RepulsineScene({ onBack }: RepulsineSceneProps) {
         }}
       >
         <color attach="background" args={[bgColor]} />
-        <fogExp2 attach="fog" args={[bgColor, isDark ? 0.016 : 0.022]} />
+        <fogExp2 attach="fog" args={[bgColor, isDark ? 0.008 : 0.015]} />
 
         <Suspense fallback={null}>
           <Environment isDark={isDark} isMobile={isMobile} />
@@ -235,7 +220,6 @@ export function RepulsineScene({ onBack }: RepulsineSceneProps) {
           maxPolarAngle={Math.PI * 0.62}
           minPolarAngle={Math.PI * 0.15}
           enablePan={false}
-          onChange={handleControlsChange}
         />
       </Canvas>
 
@@ -258,8 +242,8 @@ export function RepulsineScene({ onBack }: RepulsineSceneProps) {
       {/* Scene Controls: Reset View & Compass/Zoom */}
       <SceneControls
         isDark={isDark}
-        azimuthAngle={azimuthAngle}
-        zoomPercent={zoomPercent}
+        controlsRef={controlsRef}
+        defaultCameraDistance={DEFAULT_CAMERA_POSITION.length()}
         onResetView={handleResetView}
       />
     </div>

@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect, useRef, useCallback } from "react";
+import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 
 interface SceneControlsProps {
   isDark: boolean;
-  azimuthAngle: number;
-  zoomPercent: number;
+  controlsRef: React.RefObject<OrbitControlsImpl | null>;
+  defaultCameraDistance: number;
   onResetView: () => void;
 }
 
@@ -36,11 +37,54 @@ function buildSpiralPath(percent: number, size: number): string {
 
 export function SceneControls({
   isDark,
-  azimuthAngle,
-  zoomPercent,
+  controlsRef,
+  defaultCameraDistance,
   onResetView,
 }: SceneControlsProps) {
   const [showCompass, setShowCompass] = useState(true);
+  const [azimuthAngle, setAzimuthAngle] = useState(0);
+  const [zoomPercent, setZoomPercent] = useState(() => {
+    // Compute initial zoom from default camera distance
+    const min = 15;
+    const max = 55;
+    const pct = Math.round(((max - defaultCameraDistance) / (max - min)) * 100);
+    return Math.max(0, Math.min(100, pct));
+  });
+  const rafPending = useRef(false);
+
+  // Subscribe to OrbitControls change events directly (avoids re-rendering parent)
+  const updateFromControls = useCallback(() => {
+    const controls = controlsRef.current;
+    if (!controls) return;
+    setAzimuthAngle(controls.getAzimuthalAngle());
+    const dist = controls.object.position.distanceTo(controls.target);
+    const min = controls.minDistance;
+    const max = controls.maxDistance;
+    const pct = Math.round(((max - dist) / (max - min)) * 100);
+    setZoomPercent(Math.max(0, Math.min(100, pct)));
+    rafPending.current = false;
+  }, [controlsRef]);
+
+  useEffect(() => {
+    const controls = controlsRef.current;
+    if (!controls) return;
+
+    const handleChange = () => {
+      // Throttle to one update per animation frame
+      if (!rafPending.current) {
+        rafPending.current = true;
+        requestAnimationFrame(updateFromControls);
+      }
+    };
+
+    controls.addEventListener("change", handleChange);
+    // Initialize values on mount
+    updateFromControls();
+
+    return () => {
+      controls.removeEventListener("change", handleChange);
+    };
+  }, [controlsRef, updateFromControls]);
 
   const accent = "#0f766e";
   const textMain = isDark ? "#f5f5f5" : "#171717";
@@ -80,8 +124,9 @@ export function SceneControls({
     <div
       style={{
         position: "fixed",
-        bottom: "80px",
         right: "24px",
+        top: "50%",
+        transform: "translateY(-50%)",
         display: "flex",
         flexDirection: "column",
         alignItems: "center",

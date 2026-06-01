@@ -24,7 +24,7 @@ export function Environment({ isDark, isMobile = false }: EnvironmentProps) {
     new THREE.Vector2(0, 78),
   ];
 
-  const industrialColor = isDark ? 0x0a0e13 : 0xd8e4ec;
+  const industrialColor = isDark ? 0x1a2530 : 0xd8e4ec;
   const ringColor = isDark ? 0x0f766e : 0x0b5c56;
 
   // Memoize ring geometry and material to prevent GPU leaks on re-render
@@ -88,8 +88,8 @@ export function Environment({ isDark, isMobile = false }: EnvironmentProps) {
         <latheGeometry args={[bunkerPoints, isMobile ? 20 : 48]} />
         <meshStandardMaterial
           color={industrialColor}
-          roughness={isDark ? 0.72 : 0.85}
-          metalness={isDark ? 0.55 : 0.2}
+          roughness={isDark ? 0.65 : 0.85}
+          metalness={isDark ? 0.45 : 0.2}
           side={THREE.BackSide}
         />
       </mesh>
@@ -108,7 +108,7 @@ export function Environment({ isDark, isMobile = false }: EnvironmentProps) {
               receiveShadow
             >
               <meshStandardMaterial
-                color={isDark ? 0x10161d : 0xc4cdd8}
+                color={isDark ? 0x18222d : 0xc4cdd8}
                 roughness={0.6}
                 metalness={0.7}
               />
@@ -120,7 +120,7 @@ export function Environment({ isDark, isMobile = false }: EnvironmentProps) {
       <mesh receiveShadow={!isMobile} rotation={[-Math.PI / 2, 0, 0]} position={[0, -4.9, 0]}>
         <circleGeometry args={[42, isMobile ? 32 : 64]} />
         <meshStandardMaterial
-          color={isDark ? 0x0c1016 : 0xc8d5e2}
+          color={isDark ? 0x141c24 : 0xc8d5e2}
           roughness={isDark ? 0.55 : 0.7}
           metalness={isDark ? 0.35 : 0.1}
         />
@@ -160,13 +160,13 @@ export function Environment({ isDark, isMobile = false }: EnvironmentProps) {
 
       {/* ─── Lighting: volumetric underground DUMB-room ─── */}
 
-      {/* Low ambient — deep underground, minimal fill (boosted for older GPUs) */}
-      <ambientLight intensity={isDark ? 0.35 : 0.6} />
+      {/* Low ambient — deep underground, moderate fill for visibility on all GPUs */}
+      <ambientLight intensity={isDark ? 0.5 : 0.6} />
 
       {/* Directional fill light — ensures geometry is always visible regardless of GPU */}
       <directionalLight
         position={[5, 30, 10]}
-        intensity={isDark ? 0.6 : 0.3}
+        intensity={isDark ? 0.8 : 0.3}
         color={isDark ? 0xc8d8e8 : 0xffffff}
       />
 
@@ -224,11 +224,11 @@ export function Environment({ isDark, isMobile = false }: EnvironmentProps) {
         decay={2}
       />
 
-      {/* Hemisphere light — subtle sky/ground colour separation */}
+      {/* Hemisphere light — sky/ground colour separation for ambient fill */}
       <hemisphereLight
         color={isDark ? 0x1a2a3a : 0xf0f4f8}
         groundColor={isDark ? 0x060a0e : 0xd0d8e0}
-        intensity={isDark ? 0.5 : 0.4}
+        intensity={isDark ? 0.7 : 0.4}
       />
     </group>
   );
