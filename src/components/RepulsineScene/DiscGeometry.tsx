@@ -63,6 +63,7 @@ export function RepulsineDisc({
 }: DiscGeometryProps) {
   const craftRef = useRef<THREE.Group>(null);
   const shellRef = useRef<THREE.Mesh>(null);
+  const wireOverlayRef = useRef<THREE.Mesh>(null);
   const plateGroupRef = useRef<THREE.Group>(null);
   const intakeRef = useRef<THREE.Mesh>(null);
   const coreRef = useRef<THREE.Mesh>(null);
@@ -196,7 +197,16 @@ export function RepulsineDisc({
     if (craftRef.current && autoRotate) {
       craftRef.current.rotation.y += 0.5 * dt;
     }
-    if (shellRef.current) shellRef.current.rotation.y -= 1.0 * dt;
+    // Pause hull rotation while hovered to prevent rapid pointer enter/leave
+    // cycling caused by the geometry rotating out from under the cursor.
+    if (shellRef.current && hoveredRef.current !== shellRef.current) {
+      shellRef.current.rotation.y -= 1.0 * dt;
+    }
+    // Keep wireframe overlay in sync with the hull
+    if (wireOverlayRef.current && shellRef.current) {
+      wireOverlayRef.current.rotation.y = shellRef.current.rotation.y;
+      wireOverlayRef.current.position.y = shellRef.current.position.y;
+    }
     if (plateGroupRef.current) plateGroupRef.current.rotation.y -= 3.0 * dt;
 
     // Pulse core emissive — clamp to non-negative
@@ -351,16 +361,17 @@ export function RepulsineDisc({
       >
         <latheGeometry args={[hullPoints, hullSegments]} />
         <primitive object={shellMat} attach="material" />
-        {/* Wire overlay — excluded from raycasting so it doesn't steal hover */}
-        <mesh raycast={() => undefined}>
-          <latheGeometry args={[hullPoints, hullSegments]} />
-          <meshBasicMaterial
-            color={0x111111}
-            wireframe
-            transparent
-            opacity={0.15}
-          />
-        </mesh>
+      </mesh>
+      {/* Wire overlay — separate sibling excluded from raycasting to avoid
+          nested-mesh pointer event conflicts with the interactive hull above */}
+      <mesh ref={wireOverlayRef} raycast={() => undefined}>
+        <latheGeometry args={[hullPoints, hullSegments]} />
+        <meshBasicMaterial
+          color={0x111111}
+          wireframe
+          transparent
+          opacity={0.15}
+        />
       </mesh>
 
       {/* Corrugated wave-disc turbine plates */}
