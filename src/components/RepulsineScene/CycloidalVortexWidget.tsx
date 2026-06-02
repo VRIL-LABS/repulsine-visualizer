@@ -265,7 +265,7 @@ export function CycloidalVortexWidget({ isDark }: CycloidalVortexWidgetProps) {
       onClick={() => setIsExpanded((v) => !v)}
       role="button"
       tabIndex={0}
-      aria-label="Cycloidal Vortex Verification panel — click to expand"
+      aria-label="Cyloid Vortex Verification panel — click to expand"
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
@@ -302,7 +302,7 @@ export function CycloidalVortexWidget({ isDark }: CycloidalVortexWidgetProps) {
               color: accent,
             }}
           >
-            Cycloidal Vortex
+            Cyloid Vortex
           </span>
         </div>
         <span

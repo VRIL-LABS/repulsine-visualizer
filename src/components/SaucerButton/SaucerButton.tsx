@@ -340,17 +340,17 @@ export function SaucerButton({ onEngage }: SaucerButtonProps) {
                   aria-hidden="true"
                 >
                   <defs>
-                    <radialGradient
+                    <linearGradient
                       id="engageGrad"
-                      cx="50%"
-                      cy="50%"
-                      r="62%"
+                      x1="0%"
+                      y1="0%"
+                      x2="100%"
+                      y2="100%"
                     >
-                      <stop offset="0%" stopColor="#ffffff" />
-                      <stop offset="32%" stopColor="#fbfdff" />
-                      <stop offset="72%" stopColor="#e4ebf2" />
-                      <stop offset="100%" stopColor="#ccd6df" />
-                    </radialGradient>
+                      <stop offset="0%" stopColor="#ffffff" stopOpacity="0.9" />
+                      <stop offset="40%" stopColor="#d8e4ef" stopOpacity="0.7" />
+                      <stop offset="100%" stopColor="#a8bccf" stopOpacity="0.5" />
+                    </linearGradient>
                     <path
                       id="engageArc"
                       d="M 125 270 A 130 130 0 0 0 285 270"
@@ -369,7 +369,6 @@ export function SaucerButton({ onEngage }: SaucerButtonProps) {
                   </text>
                   <text
                     className={styles.engageText}
-                    style={{ opacity: 0.92 }}
                   >
                     <textPath
                       href="#engageArc"
