@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Orbitron, Inter } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 
 const orbitron = Orbitron({
@@ -29,7 +30,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`h-full ${orbitron.variable} ${inter.variable}`}>
-      <body className="h-full font-sans">{children}</body>
+      <body className="h-full font-sans">
+        {children}
+        <Analytics />
+      </body>
     </html>
   );
 }
