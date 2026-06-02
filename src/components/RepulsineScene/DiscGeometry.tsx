@@ -352,7 +352,7 @@ export function RepulsineDisc({
         <latheGeometry args={[hullPoints, hullSegments]} />
         <primitive object={shellMat} attach="material" />
         {/* Wire overlay — excluded from raycasting so it doesn't steal hover */}
-        <mesh raycast={() => null}>
+        <mesh raycast={() => undefined}>
           <latheGeometry args={[hullPoints, hullSegments]} />
           <meshBasicMaterial
             color={0x111111}
