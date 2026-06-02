@@ -2,7 +2,7 @@
 
 import { useRef, useMemo, useCallback, useEffect } from "react";
 import * as THREE from "three";
-import { useFrame, useThree } from "@react-three/fiber";
+import { useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
 import type { HoveredPart } from "./types";
 
 interface DiscGeometryProps {
@@ -68,7 +68,7 @@ export function RepulsineDisc({
   const coreRef = useRef<THREE.Mesh>(null);
   const pipeGroupRef = useRef<THREE.Group>(null);
 
-  const { camera, gl } = useThree();
+  const { camera } = useThree();
 
   // Target Y positions: [baseY, explodedY]
   const partTargets = useRef<Map<THREE.Object3D, [number, number]>>(new Map());
@@ -132,7 +132,7 @@ export function RepulsineDisc({
   }, [corrugatedGeo]);
 
   // Track hovered object
-  const hoveredRef = useRef<THREE.Object3D | null>(null);
+  const hoveredRef = useRef<THREE.Mesh | null>(null);
   const originalMatRef = useRef<THREE.Material | THREE.Material[] | null>(null);
   // Store hovered part metadata separately for continuous screenPos updates
   const hoveredMetaRef = useRef<Omit<HoveredPart, "screenPos"> | null>(null);
@@ -144,20 +144,50 @@ export function RepulsineDisc({
     onHoverRef.current = onHover;
   }, [onHover]);
 
-  const raycaster = useMemo(() => new THREE.Raycaster(), []);
-  // Use a ref (not useMemo) so mutation inside the callback doesn't trigger lint warnings
-  const mouseRef = useRef(new THREE.Vector2());
+  // Apply the teal highlight material to a part and capture its metadata.
+  const applyHighlight = useCallback(
+    (obj: THREE.Mesh) => {
+      if (hoveredRef.current === obj) return;
+      // Restore a previously highlighted part first
+      if (hoveredRef.current && originalMatRef.current) {
+        hoveredRef.current.material = originalMatRef.current;
+      }
+      hoveredRef.current = obj;
+      originalMatRef.current = obj.material;
+      obj.material = highlightMat;
+      // Reset throttle so the connector snaps to the new part immediately
+      lastScreenPosRef.current = null;
 
-  const getInteractables = useCallback((): THREE.Object3D[] => {
-    const list: THREE.Object3D[] = [];
-    if (intakeRef.current) list.push(intakeRef.current);
-    if (coreRef.current) list.push(coreRef.current);
-    if (shellRef.current) list.push(shellRef.current);
-    if (plateGroupRef.current)
-      plateGroupRef.current.children.forEach((c) => list.push(c));
-    if (pipeGroupRef.current)
-      pipeGroupRef.current.children.forEach((c) => list.push(c));
-    return list;
+      const ud = obj.userData as {
+        name?: string;
+        desc?: string;
+        v1?: string;
+        l1?: string;
+        v2?: string;
+        l2?: string;
+      };
+      hoveredMetaRef.current = {
+        name: ud.name ?? "Component",
+        desc: ud.desc ?? "",
+        v1: ud.v1 ?? "",
+        l1: ud.l1 ?? "",
+        v2: ud.v2 ?? "",
+        l2: ud.l2 ?? "",
+      };
+    },
+    [highlightMat],
+  );
+
+  // Remove the highlight and hide the telemetry panel.
+  const clearHighlight = useCallback(() => {
+    if (hoveredRef.current && originalMatRef.current) {
+      hoveredRef.current.material = originalMatRef.current;
+    }
+    hoveredRef.current = null;
+    originalMatRef.current = null;
+    hoveredMetaRef.current = null;
+    lastScreenPosRef.current = null;
+    onHoverRef.current(null);
   }, []);
 
   useFrame(({ clock }, delta) => {
@@ -213,73 +243,59 @@ export function RepulsineDisc({
     []
   );
 
-  const handlePointerMove = useCallback(
-    (e: MouseEvent) => {
-      mouseRef.current.x = (e.clientX / window.innerWidth) * 2 - 1;
-      mouseRef.current.y = -(e.clientY / window.innerHeight) * 2 + 1;
-      raycaster.setFromCamera(mouseRef.current, camera);
-
-      const hits = raycaster.intersectObjects(getInteractables(), false);
-      if (hits.length > 0) {
-        const obj = hits[0].object;
-        if (hoveredRef.current !== obj) {
-          // Reset previous
-          if (hoveredRef.current && originalMatRef.current) {
-            (hoveredRef.current as THREE.Mesh).material =
-              originalMatRef.current as THREE.Material;
-          }
-          hoveredRef.current = obj;
-          originalMatRef.current = (obj as THREE.Mesh).material;
-          (obj as THREE.Mesh).material = highlightMat;
-
-          // Reset throttle for immediate onHover call on new object
-          lastScreenPosRef.current = null;
-
-          const ud = obj.userData as {
-            name: string;
-            desc: string;
-            v1: string;
-            l1: string;
-            v2: string;
-            l2: string;
-          };
-
-          hoveredMetaRef.current = {
-            name: ud.name ?? "Component",
-            desc: ud.desc ?? "",
-            v1: ud.v1 ?? "",
-            l1: ud.l1 ?? "",
-            v2: ud.v2 ?? "",
-            l2: ud.l2 ?? "",
-          };
-        }
-      } else {
-        if (hoveredRef.current && originalMatRef.current) {
-          (hoveredRef.current as THREE.Mesh).material =
-            originalMatRef.current as THREE.Material;
-        }
-        hoveredRef.current = null;
-        originalMatRef.current = null;
-        hoveredMetaRef.current = null;
-        lastScreenPosRef.current = null;
-        onHoverRef.current(null);
-      }
+  // ─── Pointer interaction (R3F events) ───
+  // Hover (mouse) shows the component panel; tap (touch/pen) toggles it so
+  // the labels work on both desktop and mobile. Using R3F's event system
+  // guarantees reliable enter/leave handling (no "stuck" highlight when the
+  // cursor leaves the canvas) and unified touch support.
+  const handlePointerOver = useCallback(
+    (e: ThreeEvent<PointerEvent>) => {
+      if (e.pointerType !== "mouse") return; // touch handled on tap
+      e.stopPropagation();
+      applyHighlight(e.object as THREE.Mesh);
     },
-    [camera, getInteractables, highlightMat, raycaster]
+    [applyHighlight],
   );
 
-  // Attach mousemove handler once via effect (not per-frame)
-  useEffect(() => {
-    if (isMobile) return;
-    const canvas = gl.domElement;
-    canvas.addEventListener("mousemove", handlePointerMove);
-    return () => {
-      canvas.removeEventListener("mousemove", handlePointerMove);
-    };
-  }, [gl.domElement, handlePointerMove, isMobile]);
+  const handlePointerOut = useCallback(
+    (e: ThreeEvent<PointerEvent>) => {
+      if (e.pointerType !== "mouse") return;
+      e.stopPropagation();
+      if (hoveredRef.current === e.object) clearHighlight();
+    },
+    [clearHighlight],
+  );
+
+  const handlePointerDown = useCallback(
+    (e: ThreeEvent<PointerEvent>) => {
+      if (e.pointerType === "mouse") return; // mouse uses hover
+      e.stopPropagation();
+      // Tap toggles the selected part on touch devices
+      if (hoveredRef.current === e.object) {
+        clearHighlight();
+      } else {
+        applyHighlight(e.object as THREE.Mesh);
+      }
+    },
+    [applyHighlight, clearHighlight],
+  );
+
+  // Tapping/clicking empty space dismisses the active selection
+  const handlePointerMissed = useCallback(() => {
+    if (hoveredRef.current) clearHighlight();
+  }, [clearHighlight]);
+
+  const interactionHandlers = useMemo(
+    () => ({
+      onPointerOver: handlePointerOver,
+      onPointerOut: handlePointerOut,
+      onPointerDown: handlePointerDown,
+    }),
+    [handlePointerOver, handlePointerOut, handlePointerDown],
+  );
 
   return (
-    <group ref={craftRef} position={[0, 5, 0]}>
+    <group ref={craftRef} position={[0, 5, 0]} onPointerMissed={handlePointerMissed}>
       {/* Intake cowl */}
       <mesh
         ref={intakeRef}
@@ -294,6 +310,7 @@ export function RepulsineDisc({
         }}
         castShadow={!isMobile}
         onUpdate={(self) => setPartTarget(self, 3.5, 8.0)}
+        {...interactionHandlers}
       >
         <torusGeometry args={[1.6, 0.25, isMobile ? 10 : 16, torusSegments]} />
         <primitive object={copperMat} attach="material" />
@@ -311,6 +328,7 @@ export function RepulsineDisc({
           l2: "Pressure",
         }}
         onUpdate={(self) => setPartTarget(self, 0, 0)}
+        {...interactionHandlers}
       >
         <sphereGeometry args={[0.8, isMobile ? 20 : 32, isMobile ? 16 : 32]} />
         <primitive object={coreMat} attach="material" />
@@ -329,11 +347,12 @@ export function RepulsineDisc({
         }}
         castShadow={!isMobile}
         onUpdate={(self) => setPartTarget(self, 0, 4.5)}
+        {...interactionHandlers}
       >
         <latheGeometry args={[hullPoints, hullSegments]} />
         <primitive object={shellMat} attach="material" />
-        {/* Wire overlay */}
-        <mesh>
+        {/* Wire overlay — excluded from raycasting so it doesn't steal hover */}
+        <mesh raycast={() => null}>
           <latheGeometry args={[hullPoints, hullSegments]} />
           <meshBasicMaterial
             color={0x111111}
@@ -363,6 +382,7 @@ export function RepulsineDisc({
               l2: "Flow Pattern",
             }}
             castShadow={!isMobile}
+            {...interactionHandlers}
           >
             <primitive object={copperMat} attach="material" />
           </mesh>
@@ -390,6 +410,7 @@ export function RepulsineDisc({
                 v2: "Centripetal",
                 l2: "Flow Vector",
               }}
+              {...interactionHandlers}
             >
               <torusGeometry
                 args={[4.4 + Math.cos(angle) * br, 0.04, isMobile ? 6 : 8, torusSegments]}
