@@ -160,7 +160,7 @@ export function SaucerButton({ onEngage }: SaucerButtonProps) {
         captionRef.current.textContent = `Charging Vril capacitors… ${Math.round(c * 100)}%`;
       } else if (!charging && c < 0.05) {
         captionRef.current.textContent =
-          "Hover · tilt toward top to reveal Triebwerk · click to charge";
+          "Select Engage to continue";
       } else if (!charging) {
         captionRef.current.textContent = `Discharge… ${Math.round(c * 100)}%`;
       }
@@ -190,7 +190,7 @@ export function SaucerButton({ onEngage }: SaucerButtonProps) {
         bioHaloRef.current.style.opacity = "0";
       }
       if (captionRef.current) {
-        captionRef.current.textContent = "Hover · tilt toward top to reveal Triebwerk · click to charge";
+        captionRef.current.textContent = "Select Engage to continue";
       }
       resetTilt();
     }
@@ -281,8 +281,57 @@ export function SaucerButton({ onEngage }: SaucerButtonProps) {
         className={styles.panel}
         aria-label="Repulsine launch control"
       >
+        {/* ── Micro-header ── */}
+        <header className={styles.microHeader}>
+          <a
+            href="https://vril.li"
+            className={styles.backBtn}
+            aria-label="Back to Vril Labs"
+          >
+            <svg
+              className={styles.backChevron}
+              viewBox="0 0 8 14"
+              fill="none"
+              aria-hidden="true"
+              focusable="false"
+            >
+              <path
+                d="M7 1L1 7L7 13"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+            <span className={styles.backLabel}>Back</span>
+          </a>
+
+          <div className={styles.brand}>
+            {/* Inline Vril Labs lightning-vortex logo — 8-fold radial bolts */}
+            <svg
+              className={styles.brandLogo}
+              viewBox="0 0 200 200"
+              xmlns="http://www.w3.org/2000/svg"
+              aria-hidden="true"
+              focusable="false"
+            >
+              {([0, 45, 90, 135, 180, 225, 270, 315] as const).map((deg) => (
+                <path
+                  key={deg}
+                  d="M 2,-82 L 14,-60 L 5,-48 L 20,-26 L 10,-8 L 3,0 L -6,-4 L -14,-22 L -7,-44 L -18,-68 Z"
+                  transform={`translate(100,100) rotate(${deg})`}
+                  fill="#39DFC8"
+                />
+              ))}
+            </svg>
+            <span className={styles.brandName} aria-label="Vril Labs">
+              VRIL <span className={styles.brandLabs}>LABS</span>
+            </span>
+          </div>
+        </header>
+
         <div className={styles.panelTag}>
-          Vril Interface · Haunebu Hull · Pass 2G
+          VRIL LABS · FLYING DISC · REPULSINE PHYSICS
         </div>
 
         <div
@@ -384,12 +433,20 @@ export function SaucerButton({ onEngage }: SaucerButtonProps) {
           </div>
 
           <div ref={captionRef} className={styles.caption}>
-            Hover · tilt toward top to reveal Triebwerk · click to charge
+            Select Engage to continue
           </div>
         </div>
 
         <div className={styles.panelNote}>
-          Haunebu Coanda Hull · Thule Triebwerk · Pass 2G
+          Haunebu Coanda Hull · Thule Triebwerk ·{" "}
+          <a
+            href="https://patents.google.com/patent/DE19915730A1/en"
+            target="_blank"
+            rel="noopener noreferrer"
+            className={styles.panelNoteLink}
+          >
+            PATENT DE19915730A1 (1999–2000)
+          </a>
         </div>
       </section>
     </main>
