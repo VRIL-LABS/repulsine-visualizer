@@ -318,7 +318,7 @@ export function SaucerButton({ onEngage }: SaucerButtonProps) {
               {([0, 45, 90, 135, 180, 225, 270, 315] as const).map((deg) => (
                 <path
                   key={deg}
-                  d="M 2,-82 L 14,-60 L 5,-48 L 20,-26 L 10,-8 L 3,0 L -6,-4 L -14,-22 L -7,-44 L -18,-68 Z"
+                  d="M 0,-85 L 9,-70 L 3,-60 L 16,-48 L 6,-38 L 18,-25 L 7,-12 L 5,-3 L 0,0 L -7,-5 L -9,-16 L -19,-28 L -8,-38 L -18,-50 L -5,-60 L -11,-72 Z"
                   transform={`translate(100,100) rotate(${deg})`}
                   fill="#39DFC8"
                 />
