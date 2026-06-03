@@ -684,7 +684,7 @@
 }
 
 /* Fallback: if background-clip:text is unsupported, show the teal solid */
-@supports not (-webkit-background-clip: text) {
+@supports not ((-webkit-background-clip: text) or (background-clip: text)) {
   .brandLabs { color: #39dfc8; }
 }
 
