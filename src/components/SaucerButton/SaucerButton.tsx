@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import styles from "./SaucerButton.module.css";
+import { VrilLabsLogo } from "@/components/VrilLabsLogo/VrilLabsLogo";
 
 interface SaucerButtonProps {
   onEngage: () => void;
@@ -281,8 +282,12 @@ export function SaucerButton({ onEngage }: SaucerButtonProps) {
         className={styles.panel}
         aria-label="Repulsine launch control"
       >
-        <div className={styles.panelTag}>
-          Vril Interface · Haunebu Hull · Pass 2G
+        <div className={styles.panelTag} aria-label="VRIL LABS">
+          <VrilLabsLogo
+            height={22}
+            fill="rgba(88,103,118,0.64)"
+            style={{ display: "block" }}
+          />
         </div>
 
         <div
