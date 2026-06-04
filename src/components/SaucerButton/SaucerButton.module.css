@@ -51,7 +51,7 @@
   text-transform: uppercase;
   color: rgba(88,103,118,.64);
 }
-.panelTag { top: 32px; left: 36px; }
+.panelTag { top: 66px; left: 36px; }
 .panelNote { right: 38px; bottom: 34px; font-size: 11px; color: rgba(95,110,125,.58); }
 
 /* ─── Scene ─── */
@@ -560,6 +560,169 @@
   16%, 38%, 66% { opacity: .98; }
 }
 
+/* ─── Micro-header ─── */
+.microHeader {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 58px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 clamp(16px, 3vw, 28px);
+  border-radius: 42px 42px 0 0;
+  z-index: 10;
+  /* Subtle frosted inner rail that sits inside the panel's own bevel */
+  background: linear-gradient(
+    180deg,
+    rgba(255,255,255,.22) 0%,
+    rgba(255,255,255,.04) 100%
+  );
+  border-bottom: 1px solid rgba(255,255,255,.36);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.52);
+}
+
+/* ── Back button ── */
+.backBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  text-decoration: none;
+  color: rgba(78,96,114,.72);
+  font-size: clamp(10px, 1.1vw, 12px);
+  font-weight: 600;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  padding: 6px clamp(10px, 1.5vw, 14px) 6px clamp(8px, 1.2vw, 10px);
+  border-radius: 999px;
+  background: linear-gradient(145deg, #eef3f7 0%, #dfe7ee 100%);
+  box-shadow:
+    4px 4px 9px rgba(164,180,196,.38),
+    -3px -3px 8px rgba(255,255,255,.94),
+    inset 0 0 0 0.5px rgba(255,255,255,.48);
+  transition: box-shadow 200ms ease, transform 200ms ease, color 200ms ease;
+  will-change: transform, box-shadow;
+  white-space: nowrap;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.backBtn:hover {
+  color: rgba(44,120,158,.86);
+  transform: translateX(-1px);
+  box-shadow:
+    2px 2px 6px rgba(164,180,196,.28),
+    -2px -2px 5px rgba(255,255,255,.88),
+    inset 2px 2px 5px rgba(164,180,196,.18),
+    inset -2px -2px 5px rgba(255,255,255,.62);
+}
+.backBtn:active {
+  transform: translateX(0);
+  box-shadow:
+    inset 3px 3px 7px rgba(164,180,196,.28),
+    inset -3px -3px 7px rgba(255,255,255,.72);
+}
+.backBtn:focus-visible {
+  outline: 2px solid rgba(57,223,200,.56);
+  outline-offset: 3px;
+}
+
+.backChevron {
+  width: 8px;
+  height: 14px;
+  flex-shrink: 0;
+  color: inherit;
+}
+
+/* Hide label text on very narrow panels, keep only the chevron */
+@media (max-width: 420px) {
+  .backLabel { display: none; }
+  .backBtn   { padding: 6px 10px; }
+}
+
+/* ── Brand mark ── */
+.brand {
+  display: flex;
+  align-items: center;
+  gap: clamp(6px, 1vw, 9px);
+}
+
+.brandLogo {
+  width: clamp(20px, 2.8vw, 28px);
+  height: clamp(20px, 2.8vw, 28px);
+  flex-shrink: 0;
+  /* Soft teal glow matching the disc's vortex core colour */
+  filter: drop-shadow(0 0 3px rgba(57,223,200,.32)) drop-shadow(0 1px 2px rgba(57,223,200,.18));
+}
+
+.brandName {
+  font-family: var(--font-orbitron, 'Orbitron', sans-serif);
+  font-size: clamp(10px, 1.2vw, 13px);
+  font-weight: 700;
+  letter-spacing: .22em;
+  color: rgba(78,96,112,.76);
+  line-height: 1;
+  white-space: nowrap;
+}
+
+/*
+  "LABS" gradient — colours drawn from the flying disc hull top:
+  soft powder-blue (#b8d4e4) → Coanda-teal (#39dfc8) → icy silver-blue (#a4c4d4).
+  Pure CSS background-clip: text — zero JS/GPU runtime cost.
+*/
+.brandLabs {
+  background: linear-gradient(
+    110deg,
+    #b8d4e4 0%,
+    #5bc8ba 38%,
+    #39dfc8 62%,
+    #a4c4d4 100%
+  );
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Fallback: if background-clip:text is unsupported, show the teal solid */
+@supports not ((-webkit-background-clip: text) or (background-clip: text)) {
+  .brandLabs { color: #39dfc8; }
+}
+
+/* ── Panel note patent link ── */
+.panelNoteLink {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  text-decoration-color: rgba(95,110,125,.30);
+  transition: color 180ms ease, text-decoration-color 180ms ease;
+}
+.panelNoteLink:hover {
+  color: rgba(44,120,158,.80);
+  text-decoration-color: rgba(44,120,158,.46);
+}
+.panelNoteLink:focus-visible {
+  outline: 1px solid rgba(57,223,200,.5);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* ─── Responsive: tighten panel padding on small screens ─── */
+@media (max-width: 600px) {
+  .panel {
+    padding-top: 76px;
+    padding-bottom: 72px;
+    border-radius: 28px;
+    min-height: 0;
+  }
+  .microHeader {
+    border-radius: 28px 28px 0 0;
+    height: 52px;
+  }
+  .panelTag  { top: 58px; font-size: 10px; letter-spacing: .14em; }
+  .panelNote { font-size: 9px; right: 20px; bottom: 22px; }
+  .caption   { font-size: 10px; letter-spacing: .16em; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .stage, .stage *,
   .saucer, .saucer *,
@@ -568,4 +731,5 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+  .backBtn { transition: none !important; }
 }
