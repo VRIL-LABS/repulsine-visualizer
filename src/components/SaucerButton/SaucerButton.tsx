@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import styles from "./SaucerButton.module.css";
+import { VrilLabsLogo } from "@/components/VrilLabsLogo/VrilLabsLogo";
 
 interface SaucerButtonProps {
   onEngage: () => void;
