@@ -70,4 +70,5 @@ The `source/` directory contains the original HTML prototypes:
 
 ## Credits
 
-Visualization inspired by Viktor Schauberger's Repulsine patents (AT146,141, AT196,680) and Callum Coats' *Living Energies*. Built by VRIL LABS.
+Visualization inspired by Viktor Schauberger's Repulsine patents (AT146,141, AT196,680), what is likely the Thule Triebwerk patent ([DE19915730A1](https://patents.google.com/patent/DE19915730A1/en)), and Callum Coats' *Living Energies*.  <br />
+Built by VRIL LABS.
