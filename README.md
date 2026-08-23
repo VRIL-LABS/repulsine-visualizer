@@ -11,7 +11,7 @@
 
 ## Overview
 
-The app begins with a neumorphic **Haunebu saucer button** (light-mode). Clicking *ENGAGE* charges the Vril capacitors and transitions to a full-screen **3D Repulsine scene** featuring:
+<a href="https://repulsine-visualizer.vercel.app/" title="View the application">The app</a> begins with a neumorphic **Haunebu saucer button** (light-mode). Clicking *ENGAGE* charges the Vril capacitors (Thule-Triebwerk engine simulation) and transitions to a full-screen **3D Repulsine scene** featuring:
 
 - **Coandă Hull** — LatheGeometry aerodynamic shell, auto-rotating with differential shell spin
 - **Corrugated Wave-Disc Turbine** — 3 sinusoidal copper plates mimicking Schauberger's trout-gill dynamics
