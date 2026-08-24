@@ -9,6 +9,18 @@
 
 </div>
 
+---
+
+<sub>// crafted for the physics community — funding keeps it maintained</sub>
+
+[![GitHub Sponsors](assets/donate/github-sponsors.svg)](https://github.com/sponsors/VrilLabs)
+[![Open Collective](assets/donate/open-collective.svg)](https://opencollective.com/vrillabs)
+[![Ko-fi](assets/donate/ko-fi.svg)](https://ko-fi.com/vrillabs)
+[![Buy Me a Coffee](assets/donate/buy-me-a-coffee.svg)](https://buymeacoffee.com/vrillabs)
+[![thanks.dev](assets/donate/thanks-dev.svg)](https://thanks.dev/u/gh/vril-labs)
+
+---
+
 ## Overview
 
 <a href="https://repulsine-visualizer.vercel.app/" title="View the application">The app</a> begins with a light neumorphic **Haunebu saucer button**. Clicking *ENGAGE* charges the Vril capacitors (Thule-Triebwerk engine simulation) and transitions to a full-screen **3D Repulsine scene** featuring:
