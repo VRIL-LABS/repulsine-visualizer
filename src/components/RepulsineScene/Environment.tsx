@@ -13,16 +13,20 @@ interface EnvironmentProps {
 export function Environment({ isDark, isMobile = false }: EnvironmentProps) {
   const industrialColor = isDark ? 0x24323f : 0xd8e4ec;
   const ringColor = isDark ? 0x0f766e : 0x0b5c56;
+  // Enclosure wall — open-ended cylinder with a 54° entrance wedge (0.3π). The
+  // covered arc is theta 0.15π..1.85π, so the wedge is centred exactly on the
+  // +Z axis (azimuth 0°, spanning -27°..+27°), which is where the camera sits.
+  // three.js CylinderGeometry maps theta as x = r·sin(theta), z = r·cos(theta).
   const bunkerWallGeo = useMemo(
     () =>
       new THREE.CylinderGeometry(
-        52,
-        54,
+        62,
+        64,
         82,
         96,
         1,
         true,
-        -Math.PI * 0.25,
+        Math.PI * 0.15,
         Math.PI * 1.7,
       ),
     [],
@@ -89,7 +93,6 @@ export function Environment({ isDark, isMobile = false }: EnvironmentProps) {
       <mesh
         geometry={bunkerWallGeo}
         position={[0, 36.5, 0]}
-        rotation={[0, Math.PI / 2, 0]}
         receiveShadow={!isMobile}
       >
         <meshStandardMaterial
@@ -100,11 +103,15 @@ export function Environment({ isDark, isMobile = false }: EnvironmentProps) {
         />
       </mesh>
 
-      {/* Steel rivet / panel ribs along bunker wall */}
+      {/* Steel rivet / panel ribs along bunker wall. Ribs are placed only where
+          the wall exists: the entrance wedge centred on +Z (azimuth -27°..+27°)
+          is left clear so no rib can block the default camera view. */}
       {!isMobile &&
         Array.from({ length: ribCount }, (_, i) => {
           const angle = (i / ribCount) * Math.PI * 2;
-          const wallR = 51.5;
+          const azimuth = Math.atan2(Math.cos(angle), Math.sin(angle));
+          if (Math.abs(azimuth) < Math.PI * 0.15) return null;
+          const wallR = 61.5;
           return (
             <mesh
               key={`rib-${i}`}
@@ -124,7 +131,7 @@ export function Environment({ isDark, isMobile = false }: EnvironmentProps) {
 
       {/* Floor — polished concrete / steel plate */}
       <mesh receiveShadow={!isMobile} rotation={[-Math.PI / 2, 0, 0]} position={[0, -4.9, 0]}>
-        <circleGeometry args={[54, isMobile ? 32 : 64]} />
+        <circleGeometry args={[64, isMobile ? 32 : 64]} />
         <meshStandardMaterial
           color={isDark ? 0x1c2731 : 0xc8d5e2}
           roughness={isDark ? 0.55 : 0.7}

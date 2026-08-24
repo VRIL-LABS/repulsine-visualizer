@@ -43,10 +43,17 @@ function isMobileDevice(): boolean {
 // Stable offset vector – avoids re-creating a new object every render
 const CHROMATIC_OFFSET = new THREE.Vector2(0.0018, 0.0018);
 
-// Default camera state for reset. Keep the room opening in front of the camera
-// so the visualizer starts in a clear, unobstructed view.
-const DEFAULT_CAMERA_POSITION = new THREE.Vector3(0, 18, 58);
+// Default camera state for reset. The camera starts *inside* the arena (inner
+// wall radius ~61.5), looking through the entrance wedge centred on +Z, so the
+// initial view of the craft is unobstructed.
+const DEFAULT_CAMERA_POSITION = new THREE.Vector3(0, 14, 46);
 const DEFAULT_TARGET = new THREE.Vector3(0, 0, 0);
+
+// OrbitControls distance bounds. MIN/MAX keep the camera inside the arena
+// (maxDistance 60 < inner wall radius 61.5) so the wall or its ribs can never
+// end up between the camera and the craft, no matter how the user zooms.
+const MIN_CAMERA_DISTANCE = 16;
+const MAX_CAMERA_DISTANCE = 60;
 
 export function RepulsineScene({ onBack }: RepulsineSceneProps) {
   const [autoRotate, setAutoRotate] = useState(true);
@@ -153,7 +160,7 @@ export function RepulsineScene({ onBack }: RepulsineSceneProps) {
         }}
         // Lock mobile DPR to 1 to reduce iPad Safari GPU memory pressure
         dpr={isMobile ? 1 : [1, 2]}
-        camera={{ position: [0, 18, 58], fov: 34, near: 0.5, far: 500 }}
+        camera={{ position: DEFAULT_CAMERA_POSITION.toArray(), fov: 42, near: 0.5, far: 500 }}
         shadows={!isMobile}
         style={{ position: "absolute", inset: 0 }}
         onCreated={({ gl }) => {
@@ -216,9 +223,11 @@ export function RepulsineScene({ onBack }: RepulsineSceneProps) {
           ref={controlsRef}
           enableDamping
           dampingFactor={0.05}
-          minDistance={18}
-          maxDistance={78}
-          maxPolarAngle={Math.PI * 0.62}
+          minDistance={MIN_CAMERA_DISTANCE}
+          maxDistance={MAX_CAMERA_DISTANCE}
+          // Polar clamp also keeps the camera above the floor (y=-4.9) even at
+          // maxDistance: cos(0.52π) · 60 ≈ -3.8 > -4.9.
+          maxPolarAngle={Math.PI * 0.52}
           minPolarAngle={Math.PI * 0.15}
           enablePan={false}
         />

@@ -45,8 +45,8 @@ export function SceneControls({
   const [showCompass, setShowCompass] = useState(true);
   const [cameraHeadingDeg, setCameraHeadingDeg] = useState(0);
   const [zoomPercent, setZoomPercent] = useState(() => {
-    const min = 18;
-    const max = 78;
+    const min = 16;
+    const max = 60;
     const pct = Math.round(((max - defaultCameraDistance) / (max - min)) * 100);
     return Math.max(0, Math.min(100, pct));
   });
