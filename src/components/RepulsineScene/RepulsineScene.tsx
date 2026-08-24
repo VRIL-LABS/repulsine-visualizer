@@ -43,8 +43,9 @@ function isMobileDevice(): boolean {
 // Stable offset vector – avoids re-creating a new object every render
 const CHROMATIC_OFFSET = new THREE.Vector2(0.0018, 0.0018);
 
-// Default camera state for reset
-const DEFAULT_CAMERA_POSITION = new THREE.Vector3(0, 18, 45);
+// Default camera state for reset. Keep the room opening in front of the camera
+// so the visualizer starts in a clear, unobstructed view.
+const DEFAULT_CAMERA_POSITION = new THREE.Vector3(0, 18, 58);
 const DEFAULT_TARGET = new THREE.Vector3(0, 0, 0);
 
 export function RepulsineScene({ onBack }: RepulsineSceneProps) {
@@ -152,7 +153,7 @@ export function RepulsineScene({ onBack }: RepulsineSceneProps) {
         }}
         // Lock mobile DPR to 1 to reduce iPad Safari GPU memory pressure
         dpr={isMobile ? 1 : [1, 2]}
-        camera={{ position: [0, 18, 45], fov: 40, near: 0.5, far: 500 }}
+        camera={{ position: [0, 18, 58], fov: 34, near: 0.5, far: 500 }}
         shadows={!isMobile}
         style={{ position: "absolute", inset: 0 }}
         onCreated={({ gl }) => {
@@ -215,8 +216,8 @@ export function RepulsineScene({ onBack }: RepulsineSceneProps) {
           ref={controlsRef}
           enableDamping
           dampingFactor={0.05}
-          minDistance={15}
-          maxDistance={55}
+          minDistance={18}
+          maxDistance={78}
           maxPolarAngle={Math.PI * 0.62}
           minPolarAngle={Math.PI * 0.15}
           enablePan={false}

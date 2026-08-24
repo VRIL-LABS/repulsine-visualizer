@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import styles from "./SaucerButton.module.css";
 import { VrilLabsLogo } from "@/components/VrilLabsLogo/VrilLabsLogo";
+import styles from "./SaucerButton.module.css";
 
 interface SaucerButtonProps {
   onEngage: () => void;
@@ -308,23 +308,11 @@ export function SaucerButton({ onEngage }: SaucerButtonProps) {
           </a>
 
           <div className={styles.brand}>
-            {/* Inline Vril Labs lightning-vortex logo — 8-fold radial bolts */}
-            <svg
+            <VrilLabsLogo
+              height={24}
+              fill="#39DFC8"
               className={styles.brandLogo}
-              viewBox="0 0 200 200"
-              xmlns="http://www.w3.org/2000/svg"
-              aria-hidden="true"
-              focusable="false"
-            >
-              {([0, 45, 90, 135, 180, 225, 270, 315] as const).map((deg) => (
-                <path
-                  key={deg}
-                  d="M 0,-85 L 9,-70 L 3,-60 L 16,-48 L 6,-38 L 18,-25 L 7,-12 L 5,-3 L 0,0 L -7,-5 L -9,-16 L -19,-28 L -8,-38 L -18,-50 L -5,-60 L -11,-72 Z"
-                  transform={`translate(100,100) rotate(${deg})`}
-                  fill="#39DFC8"
-                />
-              ))}
-            </svg>
+            />
             <span className={styles.brandName} aria-label="Vril Labs">
               VRIL <span className={styles.brandLabs}>LABS</span>
             </span>

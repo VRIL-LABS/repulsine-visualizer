@@ -11,22 +11,12 @@ interface EnvironmentProps {
 }
 
 export function Environment({ isDark, isMobile = false }: EnvironmentProps) {
-  // Steel-gilded underground bunker profile — flared dome ceiling with thick walls
-  const bunkerPoints = [
-    new THREE.Vector2(0, -5),
-    new THREE.Vector2(40, -5),
-    new THREE.Vector2(40, 0),
-    new THREE.Vector2(42, 2),
-    new THREE.Vector2(42, 38),
-    new THREE.Vector2(40, 42),
-    new THREE.Vector2(36, 52),
-    new THREE.Vector2(28, 64),
-    new THREE.Vector2(16, 74),
-    new THREE.Vector2(0, 78),
-  ];
-
   const industrialColor = isDark ? 0x24323f : 0xd8e4ec;
   const ringColor = isDark ? 0x0f766e : 0x0b5c56;
+  const bunkerWallGeo = useMemo(
+    () => new THREE.CylinderGeometry(40, 42, 82, 96, 1, true, -Math.PI * 0.25, Math.PI * 1.7),
+    [],
+  );
 
   // Memoize ring geometry and material to prevent GPU leaks on re-render
   const { ringLines, ringMat } = useMemo(() => {
@@ -59,10 +49,11 @@ export function Environment({ isDark, isMobile = false }: EnvironmentProps) {
   // Dispose GPU resources when replaced or unmounted
   useEffect(() => {
     return () => {
+      bunkerWallGeo.dispose();
       ringLines.forEach((l) => l.geometry.dispose());
       ringMat.dispose();
     };
-  }, [ringLines, ringMat]);
+  }, [bunkerWallGeo, ringLines, ringMat]);
 
   // Animate by rotating the rings group
   const ringsGroupRef = useRef<THREE.Group>(null);
@@ -85,13 +76,17 @@ export function Environment({ isDark, isMobile = false }: EnvironmentProps) {
   return (
     <group>
       {/* Bunker walls — dark steel with high metalness */}
-      <mesh receiveShadow={!isMobile}>
-        <latheGeometry args={[bunkerPoints, isMobile ? 20 : 48]} />
+      <mesh
+        geometry={bunkerWallGeo}
+        position={[0, 18, 0]}
+        rotation={[0, Math.PI / 2, 0]}
+        receiveShadow={!isMobile}
+      >
         <meshStandardMaterial
           color={industrialColor}
           roughness={isDark ? 0.65 : 0.85}
           metalness={isDark ? 0.45 : 0.2}
-          side={THREE.BackSide}
+          side={THREE.DoubleSide}
         />
       </mesh>
 

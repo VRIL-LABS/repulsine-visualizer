@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useMemo, useEffect, useRef, useCallback } from "react";
+import * as THREE from "three";
 import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 
 interface SceneControlsProps {
@@ -42,28 +43,34 @@ export function SceneControls({
   onResetView,
 }: SceneControlsProps) {
   const [showCompass, setShowCompass] = useState(true);
-  const [azimuthAngle, setAzimuthAngle] = useState(0);
+  const [cameraHeadingDeg, setCameraHeadingDeg] = useState(0);
   const [zoomPercent, setZoomPercent] = useState(() => {
-    // Compute initial zoom from default camera distance
-    const min = 15;
-    const max = 55;
+    const min = 18;
+    const max = 78;
     const pct = Math.round(((max - defaultCameraDistance) / (max - min)) * 100);
     return Math.max(0, Math.min(100, pct));
   });
   const rafPending = useRef(false);
 
+  const getCameraHeadingDeg = useCallback((controls: OrbitControlsImpl) => {
+    const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(controls.object.quaternion);
+    const heading = Math.atan2(forward.x, forward.z);
+    return ((heading * 180) / Math.PI + 360) % 360;
+  }, []);
+
   // Subscribe to OrbitControls change events directly (avoids re-rendering parent)
   const updateFromControls = useCallback(() => {
     const controls = controlsRef.current;
     if (!controls) return;
-    setAzimuthAngle(controls.getAzimuthalAngle());
+    setCameraHeadingDeg(getCameraHeadingDeg(controls));
+
     const dist = controls.object.position.distanceTo(controls.target);
     const min = controls.minDistance;
     const max = controls.maxDistance;
     const pct = Math.round(((max - dist) / (max - min)) * 100);
     setZoomPercent(Math.max(0, Math.min(100, pct)));
     rafPending.current = false;
-  }, [controlsRef]);
+  }, [controlsRef, getCameraHeadingDeg]);
 
   useEffect(() => {
     const controls = controlsRef.current;
@@ -96,13 +103,14 @@ export function SceneControls({
     ? "rgba(64,64,64,0.8)"
     : "rgba(229,229,229,0.8)";
 
-  // Compass needle rotation (convert azimuth radians to degrees)
-  const compassDeg = useMemo(() => {
-    return (azimuthAngle * 180) / Math.PI;
-  }, [azimuthAngle]);
+  // Compass needle rotation tracks the camera-facing direction, not the orbit angle.
+  const compassDeg = useMemo(() => cameraHeadingDeg, [cameraHeadingDeg]);
 
   // Spiral path for zoom indicator
   const spiralPath = useMemo(() => buildSpiralPath(zoomPercent, 36), [zoomPercent]);
+  const zoomRadius = 11;
+  const zoomCircumference = 2 * Math.PI * zoomRadius;
+  const zoomDashOffset = zoomCircumference * (1 - zoomPercent / 100);
 
   const btnBase: React.CSSProperties = {
     display: "flex",
@@ -143,7 +151,7 @@ export function SceneControls({
         aria-label={showCompass ? "Compass indicator" : "Zoom indicator"}
       >
         {showCompass ? (
-          /* Compass SVG — rotates with camera azimuth */
+          /* Compass SVG — rotates to match the camera-facing direction */
           <svg
             width="24"
             height="24"
@@ -154,28 +162,47 @@ export function SceneControls({
               transition: "transform 0.15s ease-out",
             }}
           >
-            {/* Outer ring */}
             <circle cx="12" cy="12" r="10" stroke={textMuted} strokeWidth="1.2" fill="none" />
-            {/* North pointer */}
+            <path d="M12 2.5v5.2M12 16.3v5.2M2.5 12h5.2M16.3 12h5.2" stroke={textMuted} strokeOpacity="0.7" strokeWidth="0.8" />
             <polygon points="12,3 10,12 14,12" fill={accent} />
-            {/* South pointer */}
-            <polygon points="12,21 10,12 14,12" fill={textMuted} opacity="0.5" />
-            {/* Center dot */}
+            <polygon points="12,21 10,12 14,12" fill={textMuted} opacity="0.45" />
             <circle cx="12" cy="12" r="1.5" fill={accent} />
           </svg>
         ) : (
-          /* Zoom spiral SVG */
           <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+            <circle
+              cx="18"
+              cy="18"
+              r={zoomRadius}
+              stroke={textMuted}
+              strokeOpacity="0.4"
+              strokeWidth="1.2"
+              fill="none"
+            />
+            <circle
+              cx="18"
+              cy="18"
+              r={zoomRadius}
+              stroke={accent}
+              strokeWidth="2.2"
+              strokeLinecap="round"
+              fill="none"
+              strokeDasharray={zoomCircumference}
+              strokeDashoffset={zoomDashOffset}
+              transform="rotate(-90 18 18)"
+            />
             <path
               d={spiralPath}
               stroke={accent}
-              strokeWidth="1.8"
+              strokeOpacity="0.8"
+              strokeWidth="1.3"
               strokeLinecap="round"
               fill="none"
+              transform="translate(0 2)"
             />
             <text
               x="18"
-              y="37"
+              y="21"
               textAnchor="middle"
               fontSize="7"
               fill={textMuted}

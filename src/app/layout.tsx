@@ -1,21 +1,12 @@
 import type { Metadata } from "next";
-import { Orbitron, Inter } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
+import "@fontsource/inter/400.css";
+import "@fontsource/inter/500.css";
+import "@fontsource/inter/600.css";
+import "@fontsource/orbitron/500.css";
+import "@fontsource/orbitron/700.css";
+import "@fontsource/orbitron/800.css";
 import "./globals.css";
-
-const orbitron = Orbitron({
-  subsets: ["latin"],
-  weight: ["500", "700", "800"],
-  variable: "--font-orbitron",
-  display: "swap",
-});
-
-const inter = Inter({
-  subsets: ["latin"],
-  weight: ["400", "500"],
-  variable: "--font-inter",
-  display: "swap",
-});
 
 export const metadata: Metadata = {
   title: "Repulsine — Implosion Dynamics | VRIL LABS",
@@ -29,7 +20,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`h-full ${orbitron.variable} ${inter.variable}`}>
+    <html lang="en" className="h-full">
       <body className="h-full font-sans">
         {children}
         <Analytics />
