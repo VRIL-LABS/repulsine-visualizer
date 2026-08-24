@@ -51,9 +51,10 @@ export function SceneControls({
     return Math.max(0, Math.min(100, pct));
   });
   const rafPending = useRef(false);
+  const cameraHeadingVector = useRef(new THREE.Vector3());
 
   const getCameraHeadingDeg = useCallback((controls: OrbitControlsImpl) => {
-    const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(controls.object.quaternion);
+    const forward = cameraHeadingVector.current.set(0, 0, -1).applyQuaternion(controls.object.quaternion);
     const heading = Math.atan2(forward.x, forward.z);
     return ((heading * 180) / Math.PI + 360) % 360;
   }, []);

@@ -78,7 +78,7 @@ export function Environment({ isDark, isMobile = false }: EnvironmentProps) {
       {/* Bunker walls — dark steel with high metalness */}
       <mesh
         geometry={bunkerWallGeo}
-        position={[0, 18, 0]}
+        position={[0, 36.5, 0]}
         rotation={[0, Math.PI / 2, 0]}
         receiveShadow={!isMobile}
       >
