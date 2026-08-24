@@ -13,11 +13,11 @@
 
 <sub>// crafted for the physics community — funding keeps it maintained</sub>
 
-[![GitHub Sponsors](assets/donate/github-sponsors.svg)](https://github.com/sponsors/VrilLabs)
-[![Open Collective](assets/donate/open-collective.svg)](https://opencollective.com/vrillabs)
-[![Ko-fi](assets/donate/ko-fi.svg)](https://ko-fi.com/vrillabs)
-[![Buy Me a Coffee](assets/donate/buy-me-a-coffee.svg)](https://buymeacoffee.com/vrillabs)
-[![thanks.dev](assets/donate/thanks-dev.svg)](https://thanks.dev/u/gh/vril-labs)
+[![GitHub Sponsors](public/donate/github-sponsors.svg)](https://github.com/sponsors/VrilLabs)
+[![Open Collective](public/donate/open-collective.svg)](https://opencollective.com/vrillabs)
+[![Ko-fi](public/donate/ko-fi.svg)](https://ko-fi.com/vrillabs)
+[![Buy Me a Coffee](public/donate/buy-me-a-coffee.svg)](https://buymeacoffee.com/vrillabs)
+[![thanks.dev](public/donate/thanks-dev.svg)](https://thanks.dev/u/gh/vril-labs)
 
 ---
 
