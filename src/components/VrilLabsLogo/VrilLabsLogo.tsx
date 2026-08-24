@@ -25,8 +25,8 @@ export function VrilLabsLogo({
       height={height}
       viewBox="0 0 1365 1365"
       xmlns="http://www.w3.org/2000/svg"
-      aria-label="VRIL LABS"
-      role="img"
+      aria-hidden="true"
+      focusable="false"
       className={className}
       style={style}
     >

@@ -5,13 +5,15 @@
   --foreground: #171717;
   --accent-teal: #39dfc8;
   --accent-gold: #ffc25c;
+  --font-inter: "Inter", "Segoe UI", sans-serif;
+  --font-orbitron: "Orbitron", "Segoe UI", sans-serif;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-inter);
+  --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
 }
 
 *,
@@ -30,6 +32,6 @@ body {
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: var(--font-inter);
   -webkit-font-smoothing: antialiased;
 }

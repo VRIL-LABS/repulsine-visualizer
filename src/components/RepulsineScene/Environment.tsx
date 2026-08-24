@@ -11,22 +11,26 @@ interface EnvironmentProps {
 }
 
 export function Environment({ isDark, isMobile = false }: EnvironmentProps) {
-  // Steel-gilded underground bunker profile — flared dome ceiling with thick walls
-  const bunkerPoints = [
-    new THREE.Vector2(0, -5),
-    new THREE.Vector2(40, -5),
-    new THREE.Vector2(40, 0),
-    new THREE.Vector2(42, 2),
-    new THREE.Vector2(42, 38),
-    new THREE.Vector2(40, 42),
-    new THREE.Vector2(36, 52),
-    new THREE.Vector2(28, 64),
-    new THREE.Vector2(16, 74),
-    new THREE.Vector2(0, 78),
-  ];
-
   const industrialColor = isDark ? 0x24323f : 0xd8e4ec;
   const ringColor = isDark ? 0x0f766e : 0x0b5c56;
+  // Enclosure wall — open-ended cylinder with a 54° entrance wedge (0.3π). The
+  // covered arc is theta 0.15π..1.85π, so the wedge is centred exactly on the
+  // +Z axis (azimuth 0°, spanning -27°..+27°), which is where the camera sits.
+  // three.js CylinderGeometry maps theta as x = r·sin(theta), z = r·cos(theta).
+  const bunkerWallGeo = useMemo(
+    () =>
+      new THREE.CylinderGeometry(
+        62,
+        64,
+        82,
+        96,
+        1,
+        true,
+        Math.PI * 0.15,
+        Math.PI * 1.7,
+      ),
+    [],
+  );
 
   // Memoize ring geometry and material to prevent GPU leaks on re-render
   const { ringLines, ringMat } = useMemo(() => {
@@ -59,10 +63,11 @@ export function Environment({ isDark, isMobile = false }: EnvironmentProps) {
   // Dispose GPU resources when replaced or unmounted
   useEffect(() => {
     return () => {
+      bunkerWallGeo.dispose();
       ringLines.forEach((l) => l.geometry.dispose());
       ringMat.dispose();
     };
-  }, [ringLines, ringMat]);
+  }, [bunkerWallGeo, ringLines, ringMat]);
 
   // Animate by rotating the rings group
   const ringsGroupRef = useRef<THREE.Group>(null);
@@ -85,21 +90,28 @@ export function Environment({ isDark, isMobile = false }: EnvironmentProps) {
   return (
     <group>
       {/* Bunker walls — dark steel with high metalness */}
-      <mesh receiveShadow={!isMobile}>
-        <latheGeometry args={[bunkerPoints, isMobile ? 20 : 48]} />
+      <mesh
+        geometry={bunkerWallGeo}
+        position={[0, 36.5, 0]}
+        receiveShadow={!isMobile}
+      >
         <meshStandardMaterial
           color={industrialColor}
           roughness={isDark ? 0.65 : 0.85}
           metalness={isDark ? 0.45 : 0.2}
-          side={THREE.BackSide}
+          side={THREE.DoubleSide}
         />
       </mesh>
 
-      {/* Steel rivet / panel ribs along bunker wall */}
+      {/* Steel rivet / panel ribs along bunker wall. Ribs are placed only where
+          the wall exists: the entrance wedge centred on +Z (azimuth -27°..+27°)
+          is left clear so no rib can block the default camera view. */}
       {!isMobile &&
         Array.from({ length: ribCount }, (_, i) => {
           const angle = (i / ribCount) * Math.PI * 2;
-          const wallR = 39.5;
+          const azimuth = Math.atan2(Math.cos(angle), Math.sin(angle));
+          if (Math.abs(azimuth) < Math.PI * 0.15) return null;
+          const wallR = 61.5;
           return (
             <mesh
               key={`rib-${i}`}
@@ -119,7 +131,7 @@ export function Environment({ isDark, isMobile = false }: EnvironmentProps) {
 
       {/* Floor — polished concrete / steel plate */}
       <mesh receiveShadow={!isMobile} rotation={[-Math.PI / 2, 0, 0]} position={[0, -4.9, 0]}>
-        <circleGeometry args={[42, isMobile ? 32 : 64]} />
+        <circleGeometry args={[64, isMobile ? 32 : 64]} />
         <meshStandardMaterial
           color={isDark ? 0x1c2731 : 0xc8d5e2}
           roughness={isDark ? 0.55 : 0.7}
