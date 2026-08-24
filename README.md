@@ -71,6 +71,12 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
+## Contributing
+
+Contributions are welcome. Please review [CONTRIBUTING.md](./CONTRIBUTING.md) for the project workflow, setup guidance, validation steps, and the expected process for issues and pull requests.
+
+The broader VRIL-LABS family also includes companion skills in the [featured skills collection](https://github.com/VRIL-LABS/skill-jam/tree/main/featured-skills).
+
 ## Deployment
 
 Configured for Vercel via `vercel.json`. Deploy with:
