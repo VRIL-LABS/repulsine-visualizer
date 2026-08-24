@@ -16,13 +16,13 @@ export function Environment({ isDark, isMobile = false }: EnvironmentProps) {
   const bunkerWallGeo = useMemo(
     () =>
       new THREE.CylinderGeometry(
-        48,
-        50,
+        52,
+        54,
         82,
         96,
         1,
         true,
-        Math.PI * 0.65,
+        -Math.PI * 0.25,
         Math.PI * 1.7,
       ),
     [],
@@ -89,7 +89,7 @@ export function Environment({ isDark, isMobile = false }: EnvironmentProps) {
       <mesh
         geometry={bunkerWallGeo}
         position={[0, 36.5, 0]}
-        rotation={[0, 0, 0]}
+        rotation={[0, Math.PI / 2, 0]}
         receiveShadow={!isMobile}
       >
         <meshStandardMaterial
@@ -104,7 +104,7 @@ export function Environment({ isDark, isMobile = false }: EnvironmentProps) {
       {!isMobile &&
         Array.from({ length: ribCount }, (_, i) => {
           const angle = (i / ribCount) * Math.PI * 2;
-          const wallR = 47.5;
+          const wallR = 51.5;
           return (
             <mesh
               key={`rib-${i}`}
@@ -124,7 +124,7 @@ export function Environment({ isDark, isMobile = false }: EnvironmentProps) {
 
       {/* Floor — polished concrete / steel plate */}
       <mesh receiveShadow={!isMobile} rotation={[-Math.PI / 2, 0, 0]} position={[0, -4.9, 0]}>
-        <circleGeometry args={[48, isMobile ? 32 : 64]} />
+        <circleGeometry args={[54, isMobile ? 32 : 64]} />
         <meshStandardMaterial
           color={isDark ? 0x1c2731 : 0xc8d5e2}
           roughness={isDark ? 0.55 : 0.7}
